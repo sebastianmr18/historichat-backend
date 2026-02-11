@@ -11,6 +11,8 @@ import { ChromaRepository } from './infrastructure/vector/chroma.repository.js';
 import { ChatService } from './application/services/chat.service.js';
 import { ChatGateway } from './interface/websocket/chat.gateway.js';
 
+import { LiveAudioGateway } from './interface/websocket/live-audio.gateway.js';
+
 const startServer = async () => {
   try {
     /**
@@ -42,8 +44,12 @@ const startServer = async () => {
     });
 
     new ChatGateway(io, chatService, elevenLabsService);
-    console.log(ChatGateway, "🛰️ WebSocket server initialized.");
+    console.log("🛰️ ChatGateway inicializado en namespace por defecto.");
 
+    new LiveAudioGateway(io);
+    console.log("🛰️ LiveAudioGateway inicializado en namespace '/realtime'.");
+
+  
     const PORT = env.PORT || 8000;
     httpServer.listen(PORT, () => {
       console.log(`

@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI, Content, Part } from "@google/generative-ai";
 import { env } from "../../config/env.js";
-import { MessageEntity } from "../../domain/entities/conversation.entity.js";
 import { Message } from "../database/entities/Message.js";
 
 export class GeminiService {
