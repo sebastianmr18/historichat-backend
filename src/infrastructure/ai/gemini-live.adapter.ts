@@ -1,63 +1,47 @@
-import { EventEmitter } from 'events';
-import { GoogleGenAI, LiveCallbacks, Modality } from '@google/genai';
-import { GEMINI_CONFIG } from '../../config/gemini-live.config.js';
+import { EventEmitter } from "events"
+import { GoogleGenAI, LiveCallbacks, Modality } from "@google/genai"
+import { GEMINI_CONFIG } from "../../config/gemini-live.config.js"
+import { logger } from "../logging/logger.js"
 
 export class GeminiLiveAdapter extends EventEmitter {
-  private client: GoogleGenAI;
+  private client: any;
   private session: any;
-  private isConnected = false;
-  private isReady = false; // 🔴 CLAVE: setupComplete recibido
+  private isReady = false;
 
   constructor() {
     super();
-    this.client = new GoogleGenAI({
-      apiKey: GEMINI_CONFIG.apiKey,
-    });
+    this.client = new GoogleGenAI({ apiKey: GEMINI_CONFIG.apiKey });
   }
 
-  public async connect(): Promise<void> {
-    if (this.isConnected) return;
-
-    console.log("🔌 Intentando conectar a Gemini Live...");
+  public async connect() {
+    if (this.session) return;
 
     const callbacks: LiveCallbacks = {
       onopen: () => {
-        console.log("✅ Conexión con Google establecida (Session Open)");
-        this.isConnected = true;
-        this.emit('open');
+        this.emit("open");
       },
-
-      onclose: (event) => {
-        console.log("❌ Conexión con Google cerrada. Detalles:", event);
-        this.isConnected = false;
-        this.isReady = false;
-        this.emit('close');
-      },
-
-      onerror: (err) => {
-        console.error("🔥 Error interno de Google:", err);
-        this.emit('error', err);
-      },
-
       onmessage: (msg) => {
-        console.log(
-          "📩 Raw Message received:",
-          JSON.stringify(msg).substring(0, 100)
-        );
-        this.handleServerMessage(msg);
+        this.emit("message", msg);
+      },
+      onerror: (err) => {
+        this.emit("error", err);
+      },
+      onclose: (ev) => {
+        this.emit("close", ev);
       },
     };
 
     try {
+
+
+
       this.session = await this.client.live.connect({
         model: GEMINI_CONFIG.liveModel,
         config: {
           generationConfig: {
             responseModalities: [Modality.AUDIO],
             speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: "Puck" },
-              },
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } },
             },
           },
           systemInstruction: {
@@ -69,89 +53,31 @@ export class GeminiLiveAdapter extends EventEmitter {
           },
         },
         callbacks,
-      });
-    } catch (error) {
-      console.error("💀 Fallo fatal al conectar:", error);
-      this.isConnected = false;
-      this.emit(
-        'error',
-        error instanceof Error ? error : new Error(String(error))
-      );
+        // map config fields to top-level to avoid deprecated generation_config usage
+        //temperature: (GEMINI_CONFIG as any).temperature,
+        //topP: (GEMINI_CONFIG as any).topP,
+        //topK: (GEMINI_CONFIG as any).topK,
+        //maxOutputTokens: (GEMINI_CONFIG as any).maxOutputTokens,
+        //speechConfig: GEMINI_CONFIG.speechConfig,
+        //systemInstruction: GEMINI_CONFIG.systemInstruction,
+      })
+      logger.info("connect() called on SDK")
+    } catch (err) {
+      logger.error("Failed to connect to Gemini", err)
+      this.emit("error", err)
     }
   }
 
-  private handleServerMessage(message: any): void {
-    // 🔴 setupComplete → ahora SÍ podemos enviar audio
-    if (message.setupComplete) {
-      console.log("🟢 Gemini setup completo, listo para audio");
-      this.isReady = true;
-      return;
-    }
-
-    if (message.serverContent?.modelTurn?.parts) {
-      for (const part of message.serverContent.modelTurn.parts) {
-        if (part.inlineData?.mimeType?.startsWith('audio/pcm')) {
-          this.emit('audio', Buffer.from(part.inlineData.data, 'base64'));
-        }
-        if (part.text) {
-          this.emit('text', part.text);
-        }
-      }
-    }
-
-    if (message.serverContent?.interrupted) {
-      this.emit('interrupted');
-    }
+  public async sendAudio(buffer: Buffer) {
+    if (!this.session) throw new Error("Session not ready");
+    // Forward binary Blob/Buffer directly as media (matching serverless)
+    await this.session.sendRealtimeInput({ media: buffer });
   }
 
-  public async sendAudio(audioBuffer: Buffer): Promise<void> {
-    // 🔴 CLAVE ABSOLUTA: no enviar antes de setupComplete
-    if (!this.isConnected || !this.session || !this.isReady) {
-      return;
-    }
-
+  public async close() {
     try {
-      await this.session.sendRealtimeInput({
-        mediaChunks: [
-          {
-            mimeType: 'audio/pcm;rate=16000',
-            data: audioBuffer.toString('base64'),
-          },
-        ],
-      });
-
-      // Latido silencioso
-      process.stdout.write('.');
-    } catch (error) {
-      console.error("Error enviando audio:", error);
-      this.emit('error', error as Error);
-    }
-  }
-
-public async endTurn(): Promise<void> {
-  if (!this.session || !this.isReady) return;
-
-  try {
-    console.log("📤 Enviando endOfTurn a Gemini");
-
-    await this.session.sendRealtimeInput({
-      endOfTurn: true,
-    });
-  } catch (err) {
-    console.error("Error enviando endOfTurn:", err);
-  }
-}
-
-
-  public disconnect(): void {
-    if (this.session) {
-      this.session.close();
-      this.session = null;
-    }
-
-    this.isConnected = false;
-    this.isReady = false;
-    this.emit('close');
-    this.removeAllListeners();
+      this.session?.close();
+    } catch (e) {}
+    this.session = null;
   }
 }

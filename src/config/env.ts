@@ -17,6 +17,7 @@ const envSchema = z.object({
   
   // Servicios de IA (Replicando keys de settings.py)
   GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY es obligatoria"),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash-native-audio-preview-09-2025"),
   ELEVENLABS_API_KEY: z.string().min(1, "ELEVENLABS_API_KEY es obligatoria"),
   
   // Vector DB (ChromaDB)

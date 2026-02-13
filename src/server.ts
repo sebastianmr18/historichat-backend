@@ -11,13 +11,17 @@ import { ChromaRepository } from './infrastructure/vector/chroma.repository.js';
 import { ChatService } from './application/services/chat.service.js';
 import { ChatGateway } from './interface/websocket/chat.gateway.js';
 
+// Live Audio
+import { InMemorySessionRepository } from './infrastructure/database/InMemorySessionRepository.js';
+import { GeminiLiveClient } from './infrastructure/ai/GeminiLiveClient.js';
+import { HandleGeminiMessage } from './domain/agent/use-cases/HandleGeminiMessage.js';
+import { StartSession } from './domain/agent/use-cases/StartSession.js';
+import { HandleAudioInput } from './domain/agent/use-cases/HandleAudioInput.js';
+import { EndSession } from './domain/agent/use-cases/EndSession.js';
 import { LiveAudioGateway } from './interface/websocket/live-audio.gateway.js';
 
 const startServer = async () => {
   try {
-    /**
-     * Inicialización de Capa de Infraestructura
-     */
     await AppDataSource.initialize();
     console.log("💾 Conexión a PostgreSQL (TypeORM) establecida.");
 
@@ -25,14 +29,8 @@ const startServer = async () => {
     const elevenLabsService = new ElevenLabsService();
     const chromaRepo = new ChromaRepository();
 
-    /**
-     * Inicialización de Capa de Aplicación
-     */
     const chatService = new ChatService(geminiService, elevenLabsService, chromaRepo);
 
-    /**
-     * Inicialización de Capa de Interfaz (Servidores)
-     */
     const httpServer = createServer(app);
     const io = new SocketIOServer(httpServer, {
       cors: {
@@ -41,15 +39,29 @@ const startServer = async () => {
         credentials: true
       },
       pingTimeout: 60000,
+      maxHttpBufferSize: 1e6 * 10, // 10MB
     });
 
     new ChatGateway(io, chatService, elevenLabsService);
-    console.log("🛰️ ChatGateway inicializado en namespace por defecto.");
+    console.log("🛰️ ChatGateway inicializado.");
 
-    new LiveAudioGateway(io);
-    console.log("🛰️ LiveAudioGateway inicializado en namespace '/realtime'.");
+    // Live Audio
+    const sessionRepository = new InMemorySessionRepository();
+    const geminiLiveApiKey = env.GEMINI_API_KEY;
+    if (!geminiLiveApiKey) throw new Error("GEMINI_API_KEY no definida");
 
-  
+    const handleGeminiMessage = new HandleGeminiMessage(sessionRepository, null as any);
+    const geminiLiveClient = new GeminiLiveClient(geminiLiveApiKey, handleGeminiMessage);
+
+    const startSession = new StartSession(sessionRepository, geminiLiveClient);
+    const handleAudioInput = new HandleAudioInput(sessionRepository, geminiLiveClient);
+    const endSession = new EndSession(sessionRepository, geminiLiveClient);
+
+    const liveAudioGateway = new LiveAudioGateway(io, startSession, handleAudioInput, endSession);
+    handleGeminiMessage.setNotifier(liveAudioGateway);
+
+    console.log("🛰️ LiveAudioGateway inicializado.");
+
     const PORT = env.PORT || 8000;
     httpServer.listen(PORT, () => {
       console.log(`
@@ -59,9 +71,6 @@ const startServer = async () => {
       `);
     });
 
-    /**
-     * Graceful Shutdown
-     */
     const shutdown = async () => {
       console.log('\n🛑 Apagando servicios...');
       await AppDataSource.destroy();
@@ -70,12 +79,11 @@ const startServer = async () => {
         process.exit(0);
       });
     };
-
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
 
   } catch (error) {
-    console.error("❌ Fallo en el arranque del servidor:", error);
+    console.error("❌ Fallo en el arranque:", error);
     process.exit(1);
   }
 };
