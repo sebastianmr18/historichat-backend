@@ -7,3 +7,11 @@ export type LiveAdapterEvents = {
   error: (err: Error) => void
   turncomplete: () => void
 }
+
+export interface ITextToSpeech {
+  synthesize(text: string, voiceName?: string): Promise<Buffer>;
+}
+
+export interface ISpeechToText {
+  transcribe(audioBuffer: Buffer, encoding?: 'WEBM_OPUS' | 'MP3' | 'LINEAR16'): Promise<string>;
+}

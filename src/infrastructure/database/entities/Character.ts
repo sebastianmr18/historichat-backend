@@ -24,6 +24,9 @@ export class Character {
   @Column({ type: "varchar", length: 150, name: "vector_db_name", default: "" })
   vectorDbName: string;
 
+  @Column({ type: "varchar", length: 50, name: "voice_id", nullable: true })
+  voiceId?: string;
+
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

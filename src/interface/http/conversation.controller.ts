@@ -44,7 +44,7 @@ export class ConversationController {
 
     try {
       const repo = AppDataSource.getRepository(Conversation);
-      const newConversation = repo.create({ characterId });
+      const newConversation = repo.create({ character: { id: characterId } });
       const savedConversation = await repo.save(newConversation);
       
       res.status(201).json(savedConversation);

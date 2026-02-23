@@ -21,10 +21,21 @@ export class GeminiService {
   ): Promise<string> {
     try {
       // 1. Formatear historial para el SDK de Google
-      const chatHistory: Content[] = history.map(msg => ({
+      let chatHistory: Content[] = history.map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }] as Part[]
       }));
+
+      // 2. Validar que el primer mensaje sea de usuario
+      const firstUserIndex = chatHistory.findIndex(m => m.role === 'user');
+      if (firstUserIndex > 0) {
+        // Descartar mensajes previos al primer usuario (probablemente del asistente)
+        chatHistory = chatHistory.slice(firstUserIndex);
+      } else if (firstUserIndex === -1) {
+        // No hay ningún mensaje de usuario en el historial, comenzar vacío
+        chatHistory = [];
+      }
+
 
       // 2. Iniciar chat con la instrucción de sistema (Plantilla del personaje)
       const chat = this.model.startChat({

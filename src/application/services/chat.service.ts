@@ -3,7 +3,7 @@ import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
 import { GeminiService } from "../../infrastructure/ai/gemini.service.js";
-import { ElevenLabsService } from "../../infrastructure/ai/elevenlabs.service.js";
+import { ITextToSpeech, ISpeechToText } from "../../shared/types.js";
 import { ChromaRepository } from "../../infrastructure/vector/chroma.repository.js";
 
 export class ChatService {
@@ -13,7 +13,7 @@ export class ChatService {
 
   constructor(
     private gemini: GeminiService,
-    private voice: ElevenLabsService,
+    private voice: ITextToSpeech & ISpeechToText,
     private vectorStore: ChromaRepository
   ) {}
 
@@ -37,6 +37,10 @@ export class ChatService {
     );
 
     const systemPrompt = `Actúa como ${conversation.character.name}. Rol: ${conversation.character.role}. Bio: ${conversation.character.biography}`;
+    console.log(systemPrompt)
+    console.log(history)
+    console.log(context)
+    console.log(userText)
 
     const aiResponseText = await this.gemini.generateResponse(
       systemPrompt,
@@ -50,7 +54,7 @@ export class ChatService {
       await manager.save(Message, { conversationId, role: "assistant", content: aiResponseText });
     });
 
-    const audioBuffer = await this.voice.textToSpeech(aiResponseText);
+    const audioBuffer = await this.voice.synthesize(aiResponseText, conversation.character.voiceId);
 
     return {
       text: aiResponseText,

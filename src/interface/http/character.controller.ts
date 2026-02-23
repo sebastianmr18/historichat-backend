@@ -14,15 +14,60 @@ export class CharacterController {
       const characters = await characterRepo.find();
       res.json(characters);
     } catch (error: any) {
-      /** * DEBUG: Esto imprimirá el error exacto en tu consola de Node. 
-       * Busca "Relation 'app_character' does not exist" o "SSL connection error".
-       */
       console.error("❌ Error detallado en getAll:", {
         message: error.message,
         stack: error.stack,
         query: error.query
       });
       
+      res.status(500).json({ 
+        error: "Internal Server Error", 
+        details: error.message 
+      });
+    }
+  }
+
+  async getById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const characterRepo = AppDataSource.getRepository(Character);
+      const character = await characterRepo.findOne({
+        where: { id: id as any }
+      });
+      
+      if (!character) {
+        return res.status(404).json({ error: "Personaje no encontrado" });
+      }
+      
+      res.json(character);
+    } catch (error: any) {
+      console.error("❌ Error en getById:", {
+        message: error.message,
+        stack: error.stack,
+        query: error.query
+      });
+      
+      res.status(500).json({ 
+        error: "Internal Server Error", 
+        details: error.message 
+      });
+    }
+  }
+
+  async updateVoiceId(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { voiceId } = req.body;
+      const character = await this.characterRepo.findOne({ where: { id: id as any } });
+      
+      if (!character) {
+        return res.status(404).json({ error: "Personaje no encontrado" });
+      }
+      
+      character.voiceId = voiceId;
+      await this.characterRepo.save(character);
+      res.json(character);
+    } catch (error: any) {
       res.status(500).json({ 
         error: "Internal Server Error", 
         details: error.message 

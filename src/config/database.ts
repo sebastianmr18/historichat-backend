@@ -11,6 +11,7 @@ export const AppDataSource = new DataSource({
   synchronize: false, // Nunca usar true en producción, usa migraciones.
   logging: env.NODE_ENV === "development",
   entities: [Character, Conversation, Message],
+  migrations: ["migrations/*.ts"],
   ssl: {
     rejectUnauthorized: false,
   },

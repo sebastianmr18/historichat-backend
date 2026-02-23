@@ -128,7 +128,7 @@ export class GeminiLiveClient implements IGeminiLiveClient {
         return;
       }
 
-      const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+      const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
       if (base64Audio) {
         console.log(`[GeminiLive] Recibido audio del modelo, tamaño base64: ${base64Audio.length}`);
         domainMessage.type = 'audio';

@@ -6,7 +6,7 @@ import { env } from './config/env.js';
 import { AppDataSource } from './config/database.js';
 
 import { GeminiService } from './infrastructure/ai/gemini.service.js';
-import { ElevenLabsService } from './infrastructure/ai/elevenlabs.service.js';
+import { GoogleCloudVoiceAdapter } from './infrastructure/ai/google-cloud-voice.adapter.js';
 import { ChromaRepository } from './infrastructure/vector/chroma.repository.js';
 import { ChatService } from './application/services/chat.service.js';
 import { ChatGateway } from './interface/websocket/chat.gateway.js';
@@ -26,10 +26,10 @@ const startServer = async () => {
     console.log("💾 Conexión a PostgreSQL (TypeORM) establecida.");
 
     const geminiService = new GeminiService();
-    const elevenLabsService = new ElevenLabsService();
+    const googleCloudVoiceAdapter = new GoogleCloudVoiceAdapter();
     const chromaRepo = new ChromaRepository();
 
-    const chatService = new ChatService(geminiService, elevenLabsService, chromaRepo);
+    const chatService = new ChatService(geminiService, googleCloudVoiceAdapter, chromaRepo);
 
     const httpServer = createServer(app);
     const io = new SocketIOServer(httpServer, {
@@ -42,7 +42,7 @@ const startServer = async () => {
       maxHttpBufferSize: 1e6 * 10, // 10MB
     });
 
-    new ChatGateway(io, chatService, elevenLabsService);
+    new ChatGateway(io, chatService, googleCloudVoiceAdapter);
     console.log("🛰️ ChatGateway inicializado.");
 
     // Live Audio

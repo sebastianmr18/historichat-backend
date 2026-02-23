@@ -1,12 +1,12 @@
 import { Server, Socket } from "socket.io";
 import { ChatService } from "../../application/services/chat.service.js";
-import { ElevenLabsService } from "../../infrastructure/ai/elevenlabs.service.js";
+import { ITextToSpeech, ISpeechToText } from "../../shared/types.js";
 
 export class ChatGateway {
   constructor(
     private io: Server,
     private chatService: ChatService,
-    private voiceService: ElevenLabsService
+    private voiceService: ITextToSpeech & ISpeechToText
   ) {
     this.initialize();
   }
@@ -28,8 +28,16 @@ export class ChatGateway {
       // Manejo de Audio (STT -> Flow)
       socket.on("send_audio", async (data: { conversationId: string, audioBase64: string }) => {
         try {
+          console.log("debug: esto llegó", data)
           const buffer = Buffer.from(data.audioBase64, 'base64');
-          const transcription = await this.voiceService.speechToText(buffer);
+          console.log("debug: buffer creado", buffer)
+          const transcription = await this.voiceService.transcribe(buffer, 'WEBM_OPUS');
+          console.log("debug: transcription", transcription)
+          
+          if (transcription.trim() === '') {
+            socket.emit("no_speech", { message: "No se detectó habla en el audio. Inténtalo de nuevo." });
+            return;
+          }
           
           // Informar al usuario qué escuchamos (Feedback inmediato)
           socket.emit("transcription", { text: transcription });

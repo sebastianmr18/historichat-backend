@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
+import path from "path";
 
 // Cargar .env
 dotenv.config();
@@ -18,7 +19,14 @@ const envSchema = z.object({
   // Servicios de IA (Replicando keys de settings.py)
   GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY es obligatoria"),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash-native-audio-preview-09-2025"),
-  ELEVENLABS_API_KEY: z.string().min(1, "ELEVENLABS_API_KEY es obligatoria"),
+  GOOGLE_APPLICATION_CREDENTIALS: z
+    .string()
+    .min(1, "GOOGLE_APPLICATION_CREDENTIALS es obligatoria")
+    .transform((val) => {
+      // Si la ruta ya es absoluta, la deja igual. Si es relativa, la resuelve desde el CWD.
+      return path.isAbsolute(val) ? val : path.resolve(process.cwd(), val);
+    }),
+  GCP_PROJECT_ID: z.string().min(1),
   
   // Vector DB (ChromaDB)
   CHROMA_API_KEY: z.string().optional(),
