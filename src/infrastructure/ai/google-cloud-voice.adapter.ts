@@ -1,6 +1,7 @@
 import speech from '@google-cloud/speech';
 import textToSpeech from '@google-cloud/text-to-speech';
 import { ITextToSpeech, ISpeechToText } from '../../shared/types.js';
+import { logger } from '../logging/logger.js';
 
 /**
  * Adaptador de infraestructura para Google Cloud Voice Services.
@@ -23,6 +24,12 @@ export class GoogleCloudVoiceAdapter implements ITextToSpeech, ISpeechToText {
    */
   async synthesize(text: string, voiceName: string = 'es-ES-Neural2-B'): Promise<Buffer> {
     try {
+      logger.debug('[gcp.voice.synthesize] started', {
+        voiceName,
+        textLength: text.length,
+        languageCode: 'es-ES',
+      });
+
       const [response] = await this.ttsClient.synthesizeSpeech({
         input: { text },
         voice: { languageCode: 'es-ES', name: voiceName },
@@ -33,8 +40,22 @@ export class GoogleCloudVoiceAdapter implements ITextToSpeech, ISpeechToText {
         throw new Error('Google Cloud no retornó contenido de audio.');
       }
 
-      return Buffer.from(response.audioContent);
+      const audioBuffer = Buffer.from(response.audioContent);
+
+      logger.debug('[gcp.voice.synthesize] completed', {
+        voiceName,
+        audioBytes: audioBuffer.length,
+      });
+
+      return audioBuffer;
     } catch (error) {
+      logger.error('[gcp.voice.synthesize] failed', {
+        voiceName,
+        textLength: text.length,
+        error: error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : { message: String(error) },
+      });
       throw new Error(`Fallo en TTS de Google Cloud: ${(error as Error).message}`);
     }
   }
@@ -47,10 +68,19 @@ export class GoogleCloudVoiceAdapter implements ITextToSpeech, ISpeechToText {
    */
   async transcribe(audioBuffer: Buffer, encoding: 'WEBM_OPUS' | 'MP3' | 'LINEAR16' = 'WEBM_OPUS'): Promise<string> {
     try {
+      const sampleRateHertz = encoding === 'WEBM_OPUS' ? 48000 : 44100;
+
+      logger.debug('[gcp.voice.transcribe] started', {
+        encoding,
+        audioBytes: audioBuffer.length,
+        sampleRateHertz,
+        languageCode: 'es-ES',
+      });
+
       const [response] = await this.sttClient.recognize({
         config: {
           encoding: encoding,
-          sampleRateHertz: encoding === 'WEBM_OPUS' ? 48000 : 44100,
+          sampleRateHertz,
           languageCode: 'es-ES',
         },
         audio: {
@@ -63,11 +93,28 @@ export class GoogleCloudVoiceAdapter implements ITextToSpeech, ISpeechToText {
         .join('\n');
 
       if (!transcription) {
+        logger.warn('[gcp.voice.transcribe] empty_transcription', {
+          encoding,
+          audioBytes: audioBuffer.length,
+        });
         return '';
       }
 
+      logger.debug('[gcp.voice.transcribe] completed', {
+        encoding,
+        audioBytes: audioBuffer.length,
+        transcriptionLength: transcription.length,
+      });
+
       return transcription;
     } catch (error) {
+      logger.error('[gcp.voice.transcribe] failed', {
+        encoding,
+        audioBytes: audioBuffer.length,
+        error: error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : { message: String(error) },
+      });
       throw new Error(`Fallo en STT de Google Cloud: ${(error as Error).message}`);
     }
   }

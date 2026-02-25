@@ -7,3 +7,7 @@ node_modules
 /dist
 
 gcp-credentials.json
+
+/docs
+
+/.github

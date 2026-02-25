@@ -1,17 +1,31 @@
 import { Request, Response } from "express";
+import { JwtPayload } from "jsonwebtoken";
 import { AppDataSource } from "../../config/database.js";
 import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
-import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 
 export class CharacterController {
   private characterRepo = AppDataSource.getRepository(Character);
   private messageRepo = AppDataSource.getRepository(Message);
 
+  private getUserId(req: Request): string | undefined {
+    if (!req.user) return undefined;
+    if (typeof req.user === "string") return req.user;
+    console.log(req.user);
+
+    const payload = req.user as JwtPayload & { id?: string };
+    return (typeof payload.sub === "string" ? payload.sub : undefined) ?? payload.id;
+  }
+
   async getAll(req: Request, res: Response) {
     try {
       const characterRepo = AppDataSource.getRepository(Character);
-      const characters = await characterRepo.find();
+      const userId = this.getUserId(req);
+      const characters = await characterRepo.find({
+        where: userId
+          ? [{ isPublic: true }, { isPublic: false, userId }]
+          : { isPublic: true },
+      });
       res.json(characters);
     } catch (error: any) {
       console.error("❌ Error detallado en getAll:", {
@@ -31,8 +45,11 @@ export class CharacterController {
     try {
       const { id } = req.params;
       const characterRepo = AppDataSource.getRepository(Character);
+      const userId = this.getUserId(req);
       const character = await characterRepo.findOne({
-        where: { id: id as any }
+        where: userId
+          ? [{ id: id as any, isPublic: true }, { id: id as any, isPublic: false, userId }]
+          : { id: id as any, isPublic: true },
       });
       
       if (!character) {
@@ -87,37 +104,4 @@ export class CharacterController {
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
-
-  async retrieve(req: Request, res: Response) {
-  const { id } = req.params;
-  try {
-    const repo = AppDataSource.getRepository(Conversation);
-    
-    // Buscamos una sola conversación con sus relaciones
-    const conversation = await repo.findOne({
-      where: { id: id as any },
-      relations: {
-        character: true,
-        messages: true,
-      },
-      order: {
-        messages: {
-          timestamp: "ASC"
-        }
-      }
-    });
-
-    if (!conversation) {
-      return res.status(404).json({ error: "Conversación no encontrada" });
-    }
-
-    res.json(conversation);
-  } catch (error: any) {
-    console.error("❌ Error en retrieve conversation:", error.message);
-    res.status(500).json({ 
-      error: "Internal Server Error",
-      details: error.message 
-    });
-  }
-}
 }

@@ -10,6 +10,7 @@ import { GoogleCloudVoiceAdapter } from './infrastructure/ai/google-cloud-voice.
 import { ChromaRepository } from './infrastructure/vector/chroma.repository.js';
 import { ChatService } from './application/services/chat.service.js';
 import { ChatGateway } from './interface/websocket/chat.gateway.js';
+import { storageService } from './interface/storage/storage.service.js';
 
 // Live Audio
 import { InMemorySessionRepository } from './infrastructure/database/InMemorySessionRepository.js';
@@ -29,7 +30,7 @@ const startServer = async () => {
     const googleCloudVoiceAdapter = new GoogleCloudVoiceAdapter();
     const chromaRepo = new ChromaRepository();
 
-    const chatService = new ChatService(geminiService, googleCloudVoiceAdapter, chromaRepo);
+    const chatService = new ChatService(geminiService, googleCloudVoiceAdapter, chromaRepo, storageService);
 
     const httpServer = createServer(app);
     const io = new SocketIOServer(httpServer, {
@@ -42,7 +43,7 @@ const startServer = async () => {
       maxHttpBufferSize: 1e6 * 10, // 10MB
     });
 
-    new ChatGateway(io, chatService, googleCloudVoiceAdapter);
+    new ChatGateway(io, chatService);
     console.log("🛰️ ChatGateway inicializado.");
 
     // Live Audio

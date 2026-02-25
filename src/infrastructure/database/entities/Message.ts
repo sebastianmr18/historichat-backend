@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Relation } from "typeorm";
 import { Conversation } from "./Conversation.js";
 
 @Entity("app_message")
@@ -20,5 +20,17 @@ export class Message {
 
   @ManyToOne(() => Conversation, (conversation) => conversation.messages, { onDelete: "CASCADE" })
   @JoinColumn({ name: "conversation_id" })
-  conversation: Conversation;
+  conversation: Relation<Conversation>;
+
+    @Column({ type: "text", name: "audio_path", nullable: true })
+  audioPath?: string | null;
+
+  @Column({ type: "text", name: "audio_storage_id", nullable: true })
+  audioStorageId?: string | null;
+
+  @Column({ type: "text", name: "media_type", nullable: true })
+  mediaType?: string | null;
+
+  @Column({ type: "integer", name: "duration_ms", nullable: true })
+  durationMs?: number | null;
 }

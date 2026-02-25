@@ -1,7 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, ManyToOne, JoinColumn, Index, Relation } from "typeorm";
 import { Conversation } from "./Conversation.js";
+import { Profile } from "./Profile.js";
 
-@Entity("app_character")
+@Entity({ name: "app_character", schema: "public" })
+@Index("idx_app_character_user_id", ["userId"])
+@Index("idx_app_character_is_public", ["isPublic"])
 export class Character {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -31,5 +34,15 @@ export class Character {
   createdAt: Date;
 
   @OneToMany(() => Conversation, (conversation) => conversation.character)
-  conversations: Conversation[];
+  conversations: Relation<Conversation[]>;
+
+  @ManyToOne(() => Profile, { nullable: true, onDelete: "CASCADE" })
+  @JoinColumn({ name: "user_id", foreignKeyConstraintName: "app_character_user_id_fkey" })
+  owner?: Relation<Profile>;
+
+  @Column("uuid", { name: "user_id", nullable: true })
+  userId?: string;
+
+  @Column({ type: "boolean", name: "is_public", default: false })
+  isPublic: boolean;
 }

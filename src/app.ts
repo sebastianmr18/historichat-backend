@@ -2,8 +2,10 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { Router } from 'express';
 import { env } from './config/env.js';
 import apiRoutes from './interface/http/routes.js';
+import { requireAuth } from './api/auth.middleware.js';
 
 const app: Application = express();
 
@@ -23,7 +25,12 @@ app.get('/health', (req: Request, res: Response) => {
 
 console.log(apiRoutes)
 
-app.use('/api', apiRoutes);
+const protectedApiRouter = Router();
+protectedApiRouter.use(requireAuth);    
+
+protectedApiRouter.use('/', apiRoutes); 
+
+app.use('/api', protectedApiRouter);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('🔥 Error Crítico:', err);

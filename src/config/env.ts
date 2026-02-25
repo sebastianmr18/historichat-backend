@@ -15,6 +15,11 @@ const envSchema = z.object({
   
   // Base de Datos (PostgreSQL Supabase)
   DATABASE_URL: z.string().url({ message: "DATABASE_URL debe ser una URL válida de conexión a PostgreSQL" }),
+  SUPABASE_URL: z.string().url({ message: "SUPABASE_URL debe ser una URL válida" }),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY es obligatoria"),
+  SUPABASE_JWT_SECRET: z.string().min(1, "SUPABASE_JWT_SECRET es obligatoria"),
+  SUPABASE_STORAGE_BUCKET: z.string().default("communications"),
+  SIGNED_URL_EXPIRES_SECONDS: z.coerce.number().int().positive().default(3600),
   
   // Servicios de IA (Replicando keys de settings.py)
   GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY es obligatoria"),
