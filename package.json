@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/server.js",
     "migration:generate": "typeorm-ts-node-esm migration:generate --dataSource src/config/database.ts",
     "migration:run": "typeorm-ts-node-esm migration:run --dataSource src/config/database.ts",
     "migration:revert": "typeorm-ts-node-esm migration:revert --dataSource src/config/database.ts"
