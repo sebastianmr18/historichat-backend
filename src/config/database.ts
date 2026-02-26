@@ -6,13 +6,17 @@ import { Conversation } from "../infrastructure/database/entities/Conversation.j
 import { Message } from "../infrastructure/database/entities/Message.js";
 import { Profile } from "../infrastructure/database/entities/Profile.js";
 
+const migrationsPath = env.NODE_ENV === "development"
+  ? ["src/migrations/*.ts"]
+  : ["dist/migrations/*.js"];
+
 export const AppDataSource = new DataSource({
   type: "postgres",
   url: env.DATABASE_URL,
   synchronize: false, // Nunca usar true en producción, usa migraciones.
   logging: env.NODE_ENV === "development",
   entities: [Character, Conversation, Message, Profile],
-  migrations: ["src/migrations/*.ts"],
+  migrations: migrationsPath,
   ssl: {
     rejectUnauthorized: false,
   },

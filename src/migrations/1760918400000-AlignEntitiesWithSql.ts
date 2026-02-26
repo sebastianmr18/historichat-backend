@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import type { MigrationInterface, QueryRunner } from "typeorm";
 
 export class AlignEntitiesWithSql1760918400000 implements MigrationInterface {
   name = "AlignEntitiesWithSql1760918400000";

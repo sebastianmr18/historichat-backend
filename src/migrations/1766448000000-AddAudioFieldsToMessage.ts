@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import type { MigrationInterface, QueryRunner } from "typeorm";
 
 export class AddAudioFieldsToMessage1766448000000 implements MigrationInterface {
   name = "AddAudioFieldsToMessage1766448000000";
