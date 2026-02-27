@@ -1,6 +1,7 @@
 import { CloudClient } from "chromadb";
 import { DefaultEmbeddingFunction } from "@chroma-core/default-embed";
 import { env } from "../../config/env.js";
+import { logger } from "../logging/logger.js";
 
 export class ChromaRepository {
   private client: CloudClient;
@@ -19,17 +20,21 @@ export class ChromaRepository {
 
   async getContext(query: string, collectionName: string): Promise<string> {
     const cleanName = collectionName.replace(/"/g, '').trim();
-    console.log("Collection Name:", collectionName);
-    console.log("cleanName:", cleanName);
+    logger.debug("[RAG][ChromaRepository] getContext:start", {
+      collectionName,
+      cleanName,
+      queryPreview: query.slice(0, 180),
+      queryLength: query.length,
+    });
 
     if (!cleanName || cleanName === "") {
-      console.warn("⚠️ No vector collection defined for this character. Skipping context.");
+      logger.warn("[RAG][ChromaRepository] getContext:missing-collection", {
+        collectionName,
+      });
       return ""; 
     }
 
     try {
-      // Nota: ChromaDB maneja internamente la API Key si se configura en el cliente o via Headers
-
       const collection = await this.client.getCollection({
         name: cleanName,
         embeddingFunction: this.embedder,
@@ -37,17 +42,33 @@ export class ChromaRepository {
 
       const results = await collection.query({
         queryTexts: [query],
-        nResults: 2,
+        nResults: 4,
+      });
+
+      const docs = results.documents?.[0]?.filter((doc): doc is string => doc !== null) ?? [];
+      logger.debug("[RAG][ChromaRepository] getContext:query-results", {
+        collection: cleanName,
+        hits: docs.length,
+        sample: docs.slice(0, 2),
       });
 
       // Validar si hay documentos y aplanarlos
-      if (results.documents && results.documents[0]) {
-        return results.documents[0].filter(doc => doc !== null).join("\n---\n");
+      if (docs.length > 0) {
+        const context = docs.join("\n---\n");
+        logger.debug("[RAG][ChromaRepository] getContext:success", {
+          collection: cleanName,
+          contextLength: context.length,
+        });
+        return context;
       }
+
+      logger.debug("[RAG][ChromaRepository] getContext:empty", {
+        collection: cleanName,
+      });
 
       return "";
     } catch (error) {
-      console.error(`⚠️ Error consultando ChromaDB (${collectionName}):`, error);
+      logger.error(`[RAG][ChromaRepository] getContext:error (${collectionName})`, error);
       return ""; // No rompemos el flujo si el RAG falla
     }
   }

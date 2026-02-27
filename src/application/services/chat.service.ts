@@ -142,6 +142,8 @@ export class ChatService {
       contextLength: context?.length ?? 0,
       systemPromptLength: systemPrompt.length,
     });
+    logger.debug("[systemPrompt]", { systemPrompt });
+    logger.debug("[context]", { context });
 
     const aiResponseText = await this.gemini.generateResponse(
       systemPrompt,
