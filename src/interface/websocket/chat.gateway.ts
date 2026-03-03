@@ -85,17 +85,15 @@ export class ChatGateway {
   }
 
   private initialize() {
-    this.io.use((socket, next) => {
+    this.io.use(async (socket, next) => {
       const authToken =
         typeof socket.handshake.auth?.token === "string"
           ? socket.handshake.auth.token
           : undefined;
-
       const headerAuthorization =
         typeof socket.handshake.headers.authorization === "string"
           ? socket.handshake.headers.authorization
           : undefined;
-
       const bearerToken = headerAuthorization?.startsWith("Bearer ")
         ? headerAuthorization.slice(7)
         : undefined;
@@ -107,7 +105,7 @@ export class ChatGateway {
       }
 
       try {
-        const decoded = this.verifier.verifyToken(token);
+        const decoded = await this.verifier.verifyToken(token);
         const userId = this.getUserId(decoded);
 
         if (!userId) {
