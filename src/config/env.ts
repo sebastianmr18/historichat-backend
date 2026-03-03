@@ -2,53 +2,40 @@ import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from "path";
 
-// Cargar .env
-dotenv.config();
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 const envSchema = z.object({
-  // Servidor
   PORT: z.string().default('8000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  
-  // Seguridad & CORS (Replicando ALLOWED_HOSTS / CORS_ALLOWED_ORIGINS)
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
-  
-  // Base de Datos (PostgreSQL Supabase)
-  DATABASE_URL: z.string().url({ message: "DATABASE_URL debe ser una URL válida de conexión a PostgreSQL" }),
-  SUPABASE_URL: z.string().url({ message: "SUPABASE_URL debe ser una URL válida" }),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "SUPABASE_SERVICE_ROLE_KEY es obligatoria"),
-  SUPABASE_JWT_SECRET: z.string().min(1, "SUPABASE_JWT_SECRET es obligatoria"),
+  DATABASE_URL: z.string().url(),
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  SUPABASE_JWT_SECRET: z.string().min(1),
   SUPABASE_STORAGE_BUCKET: z.string().default("communications"),
   SIGNED_URL_EXPIRES_SECONDS: z.coerce.number().int().positive().default(3600),
-  
-  // Servicios de IA (Replicando keys de settings.py)
-  GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY es obligatoria"),
+  GEMINI_API_KEY: z.string().min(1),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash-native-audio-preview-09-2025"),
   GOOGLE_APPLICATION_CREDENTIALS: z
     .string()
-    .min(1, "GOOGLE_APPLICATION_CREDENTIALS es obligatoria")
+    .min(1)
     .transform((val) => {
-      // Si la ruta ya es absoluta, la deja igual. Si es relativa, la resuelve desde el CWD.
       return path.isAbsolute(val) ? val : path.resolve(process.cwd(), val);
     }),
   GCP_PROJECT_ID: z.string().min(1),
-  
-  // Vector DB (ChromaDB)
   CHROMA_API_KEY: z.string().optional(),
   CHROMA_TENANT: z.string().default('default_tenant'),
   CHROMA_DATABASE: z.string().default('default_database'),
-  CHROMA_HOST: z.string().optional(), // Si usas chroma en la nube o local con URL específica
+  CHROMA_HOST: z.string().optional(),
 });
 
-// Validación al inicio (Crash inmediato si falla)
 const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {
-  console.error('❌ Variables de entorno inválidas:', _env.error.format());
+  console.error('❌ Variables de entorno inválidas:', JSON.stringify(_env.error.format(), null, 2));
   process.exit(1);
-} else {
-  console.log('✅ Variables de entorno cargadas correctamente.');
 }
-
 
 export const env = _env.data;
