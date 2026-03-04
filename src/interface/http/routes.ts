@@ -8,6 +8,7 @@ const characterCtrl = new CharacterController();
 const conversationCtrl = new ConversationController();
 
 router.get('/characters', (req, res) => characterCtrl.getAll(req, res));
+router.post('/characters', (req, res) => characterCtrl.create(req, res));
 router.get('/characters/:id', (req, res) => characterCtrl.getById(req, res));
 router.put('/characters/:id/voice', (req, res) => characterCtrl.updateVoiceId(req, res));
 router.get('/conversations', (req, res) => conversationCtrl.list(req, res));

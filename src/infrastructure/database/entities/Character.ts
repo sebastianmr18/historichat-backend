@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, ManyToOne, JoinColumn, Index, Relation } from "typeorm";
+import { randomUUID } from "crypto";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, ManyToOne, JoinColumn, Index, Relation, BeforeInsert } from "typeorm";
 import { Conversation } from "./Conversation.js";
 import { Profile } from "./Profile.js";
 
@@ -45,4 +46,15 @@ export class Character {
 
   @Column({ type: "boolean", name: "is_public", default: false })
   isPublic: boolean;
+
+  @BeforeInsert()
+  assignDefaultsBeforeInsert() {
+    if (!this.id) {
+      this.id = randomUUID();
+    }
+
+    if (!this.createdAt) {
+      this.createdAt = new Date();
+    }
+  }
 }
