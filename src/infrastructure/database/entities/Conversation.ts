@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, OneToMany, JoinColumn, Column, Index, Relation } from "typeorm";
+import { randomUUID } from "crypto";
+import { Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, OneToMany, JoinColumn, Column, Index, Relation, BeforeInsert } from "typeorm";
 import { Character } from "./Character.js";
 import { Message } from "./Message.js";
 import { Profile } from "./Profile.js";
@@ -25,4 +26,15 @@ export class Conversation {
 
   @Column("uuid", { name: "user_id" })
   userId: string;
+
+  @BeforeInsert()
+  assignDefaultsBeforeInsert() {
+    if (!this.id) {
+      this.id = randomUUID();
+    }
+
+    if (!this.createdAt) {
+      this.createdAt = new Date();
+    }
+  }
 }

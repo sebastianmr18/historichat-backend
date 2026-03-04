@@ -19,6 +19,7 @@ export interface ISpeechToText {
 export interface IStorageService {
   uploadFile(bucket: string, path: string, file: Buffer, mimeType: string): Promise<string>;
   getSignedUrl(bucket: string, path: string, expiresInSeconds: number): Promise<string>;
+  deleteFiles(bucket: string, paths: string[]): Promise<void>;
 }
 
 export interface RequestTraceContext {

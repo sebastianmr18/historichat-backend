@@ -4,9 +4,23 @@ import { AppDataSource } from "../../config/database.js";
 import { env } from "../../config/env.js";
 import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
+import { Message } from "../../infrastructure/database/entities/Message.js";
+import { logger } from "../../infrastructure/logging/logger.js";
 import { storageService } from "../storage/storage.service.js";
 
 export class ConversationController {
+  private toErrorPayload(error: unknown) {
+    if (error instanceof Error) {
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      };
+    }
+
+    return { message: String(error) };
+  }
+
   private getUserId(req: Request): string | undefined {
     if (!req.user) return undefined;
     if (typeof req.user === "string") return req.user;
@@ -52,6 +66,17 @@ export class ConversationController {
 
   private async withSignedUrls(conversations: Conversation[]) {
     return Promise.all(conversations.map((conversation) => this.withSignedUrlsForConversation(conversation)));
+  }
+
+  private getMessageAudioPaths(messages: Message[]): string[] {
+    const paths = messages.flatMap((message) => {
+      const values = [message.audioStorageId, message.audioPath];
+      return values
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value));
+    });
+
+    return [...new Set(paths)];
   }
 
   /**
@@ -137,14 +162,54 @@ export class ConversationController {
    */
   async destroy(req: Request, res: Response) {
     const userId = this.getUserId(req);
+    const conversationId = req.params.id as any;
+    const traceId = `trace_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
     if (!userId) {
       return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
     try {
-      const repo = AppDataSource.getRepository(Conversation);
-      const result = await repo.delete({ id: req.params.id as any, userId });
+      const conversationRepo = AppDataSource.getRepository(Conversation);
+      const messageRepo = AppDataSource.getRepository(Message);
+
+      const conversation = await conversationRepo.findOne({
+        where: { id: conversationId, userId },
+      });
+
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversación no encontrada" });
+      }
+
+      const messages = await messageRepo.find({
+        where: { conversationId },
+      });
+
+      const audioPaths = this.getMessageAudioPaths(messages);
+
+      if (audioPaths.length > 0) {
+        try {
+          await storageService.deleteFiles(env.SUPABASE_STORAGE_BUCKET, audioPaths);
+          logger.debug("[conversation.destroy] audio_cleanup_completed", {
+            traceId,
+            event: "delete_conversation",
+            conversationId,
+            userId,
+            deletedAudioFiles: audioPaths.length,
+          });
+        } catch (error) {
+          logger.warn("[conversation.destroy] audio_cleanup_failed", {
+            traceId,
+            event: "delete_conversation",
+            conversationId,
+            userId,
+            audioPaths,
+            error: this.toErrorPayload(error),
+          });
+        }
+      }
+
+      const result = await conversationRepo.delete({ id: conversationId, userId });
       
       if (result.affected === 0) {
         return res.status(404).json({ error: "Conversación no encontrada" });

@@ -75,4 +75,40 @@ export class SupabaseStorageService implements IStorageService {
 
     return data.signedUrl;
   }
+
+  async deleteFiles(bucket: string, paths: string[]): Promise<void> {
+    const normalizedPaths = [...new Set(paths.map((path) => path.trim()).filter(Boolean))];
+
+    if (normalizedPaths.length === 0) {
+      return;
+    }
+
+    logger.debug('[storage.deleteFiles] started', {
+      bucket,
+      fileCount: normalizedPaths.length,
+    });
+
+    const { data, error } = await this.supabase.storage
+      .from(bucket)
+      .remove(normalizedPaths);
+
+    if (error) {
+      logger.error('[storage.deleteFiles] failed', {
+        bucket,
+        fileCount: normalizedPaths.length,
+        paths: normalizedPaths,
+        error: {
+          message: error.message,
+          name: error.name,
+        },
+      });
+      throw new Error(`Failed to delete files from Supabase: ${error.message}`);
+    }
+
+    logger.debug('[storage.deleteFiles] completed', {
+      bucket,
+      fileCount: normalizedPaths.length,
+      removedCount: data?.length ?? 0,
+    });
+  }
 }
