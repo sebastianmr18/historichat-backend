@@ -10,4 +10,6 @@ gcp-credentials.json
 
 /docs
 
-/.github
+/.github/agents
+
+*.md
