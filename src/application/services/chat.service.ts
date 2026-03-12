@@ -120,7 +120,7 @@ export class ChatService {
 
     const history = await this.messageRepo.find({
       where: { conversationId },
-      order: { timestamp: "ASC" },
+      order: { timestamp: "ASC", id: "ASC" },
       take: 6,
     });
 

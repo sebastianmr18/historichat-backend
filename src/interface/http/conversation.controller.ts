@@ -61,7 +61,7 @@ export class ConversationController {
       const conversations = await this.conversationRepo.find({
         where: { userId },
         relations: { character: true, messages: true },
-        order: { createdAt: "DESC", messages: { timestamp: "ASC" } },
+        order: { createdAt: "DESC", messages: { timestamp: "ASC", id: "ASC" } },
       });
       const conversationsWithAudioUrls = await this.withSignedUrls(conversations);
       res.json(conversationsWithAudioUrls);
@@ -159,7 +159,7 @@ export class ConversationController {
       const conversation = await this.conversationRepo.findOne({
         where: { id: req.params.id as any, userId },
         relations: { character: true, messages: true },
-        order: { messages: { timestamp: "ASC" } },
+        order: { messages: { timestamp: "ASC", id: "ASC" } },
       });
 
       if (!conversation) return res.status(404).json({ error: "Conversación no encontrada" });
