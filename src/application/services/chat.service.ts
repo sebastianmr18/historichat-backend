@@ -1,5 +1,4 @@
 import { AppDataSource } from "../../config/database.js";
-import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
 import { GeminiService } from "../../infrastructure/ai/gemini.service.js";
@@ -7,31 +6,15 @@ import { ChatResponse, IStorageService, ITextToSpeech, ISpeechToText, ProcessAud
 import { ChromaRepository } from "../../infrastructure/vector/chroma.repository.js";
 import { env } from "../../config/env.js";
 import { logger } from "../../infrastructure/logging/logger.js";
-
-export type ChatFlowErrorCode =
-  | "CONVERSATION_NOT_FOUND"
-  | "STT_FAILED"
-  | "NO_SPEECH"
-  | "AUDIO_UPLOAD_FAILED"
-  | "AI_RESPONSE_FAILED"
-  | "TEXT_PROCESSING_FAILED"
-  | "AUDIO_PROCESSING_FAILED";
-
-export class ChatFlowError extends Error {
-  constructor(
-    public readonly code: ChatFlowErrorCode,
-    message: string,
-    public readonly stage: "validation" | "stt" | "upload" | "ai" | "persistence" | "tts" | "unknown",
-    public readonly retryable: boolean,
-    public readonly cause?: unknown
-  ) {
-    super(message);
-    this.name = "ChatFlowError";
-  }
-}
+import { serializeError } from "../../shared/errors.js";
+import { createTraceContext } from "../../shared/trace.js";
+import { getEncodingFromMimeType, getFileExtensionFromMimeType } from "../../shared/mime-utils.js";
+import { buildSystemPrompt } from "../prompts/character-prompt.js";
+import type { ChatFlowErrorCode } from "../../domain/errors/chat-flow.error.js";
+import { ChatFlowError } from "../../domain/errors/chat-flow.error.js";
+export { ChatFlowError, ChatFlowErrorCode };
 
 export class ChatService {
-  private characterRepo = AppDataSource.getRepository(Character);
   private conversationRepo = AppDataSource.getRepository(Conversation);
   private messageRepo = AppDataSource.getRepository(Message);
 
@@ -43,25 +26,12 @@ export class ChatService {
     private readonly storageBucket: string = env.SUPABASE_STORAGE_BUCKET
   ) {}
 
-  private createTraceContext(base: RequestTraceContext | undefined, extras: Record<string, unknown> = {}) {
-    return {
-      traceId: base?.traceId ?? `trace_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
-      socketId: base?.socketId,
-      event: base?.event,
-      ...extras,
-    };
-  }
-
-  private toErrorPayload(error: unknown) {
-    if (error instanceof Error) {
-      return {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
+  private toChatFlowError(error: unknown, fallbackCode: ChatFlowErrorCode, fallbackMessage: string): ChatFlowError {
+    if (error instanceof ChatFlowError) {
+      return error;
     }
 
-    return { message: String(error) };
+    return new ChatFlowError(fallbackCode, fallbackMessage, "unknown", true, error);
   }
 
   private async getConversation(conversationId: string, userId: string) {
@@ -82,40 +52,67 @@ export class ChatService {
     return conversation;
   }
 
-  private getEncodingFromMimeType(mimeType: string): 'WEBM_OPUS' | 'MP3' | 'LINEAR16' {
-    if (mimeType.includes("webm")) {
-      return "WEBM_OPUS";
+  private async synthesizeAndUpload(
+    text: string,
+    voiceId: string | undefined,
+    messageId: number,
+    userId: string,
+    conversationId: string,
+    traceCtx: Record<string, unknown>
+  ): Promise<{ audioBase64: string } | { warning: ChatResponse["warning"] }> {
+    try {
+      const audioBuffer = await this.voice.synthesize(text, voiceId);
+      const audioPath = `${userId}/${conversationId}/${messageId}.mp3`;
+
+      logger.debug("[chat.synthesizeAndUpload] tts_generated", {
+        ...traceCtx,
+        messageId,
+        voiceId,
+        audioBytes: audioBuffer.length,
+        audioPath,
+        storageBucket: this.storageBucket,
+      });
+
+      const uploadedPath = await this.storageService.uploadFile(
+        this.storageBucket,
+        audioPath,
+        audioBuffer,
+        "audio/mp3"
+      );
+
+      logger.debug("[chat.synthesizeAndUpload] audio_uploaded", {
+        ...traceCtx,
+        messageId,
+        uploadedPath,
+      });
+
+      await this.messageRepo.update(
+        { id: messageId },
+        {
+          audioPath: uploadedPath,
+          audioStorageId: uploadedPath,
+          mediaType: "audio/mp3",
+        }
+      );
+
+      return { audioBase64: audioBuffer.toString("base64") };
+    } catch (error) {
+      logger.error("[chat.synthesizeAndUpload] tts_or_upload_failed", {
+        ...traceCtx,
+        messageId,
+        voiceId,
+        error: serializeError(error),
+      });
+
+      return {
+        warning: {
+          code: "TTS_FAILED",
+          message: "La respuesta se generó, pero el audio no está disponible.",
+          stage: "tts",
+          retryable: true,
+        },
+      };
     }
-
-    if (mimeType.includes("mp3") || mimeType.includes("mpeg")) {
-      return "MP3";
-    }
-
-    return "LINEAR16";
-  }
-
-  private getFileExtensionFromMimeType(mimeType: string): string {
-    if (mimeType.includes("webm")) {
-      return "webm";
-    }
-
-    if (mimeType.includes("mp3") || mimeType.includes("mpeg")) {
-      return "mp3";
-    }
-
-    if (mimeType.includes("wav")) {
-      return "wav";
-    }
-
-    return "bin";
-  }
-
-  private toChatFlowError(error: unknown, fallbackCode: ChatFlowErrorCode, fallbackMessage: string): ChatFlowError {
-    if (error instanceof ChatFlowError) {
-      return error;
-    }
-
-    return new ChatFlowError(fallbackCode, fallbackMessage, "unknown", true, error);
   }
 
   private async generateAiResponse(conversation: Conversation, userText: string) {
@@ -132,7 +129,8 @@ export class ChatService {
       conversation.character.vectorDbName || "default"
     );
 
-    const systemPrompt = `Actúa como ${conversation.character.name}. Rol: ${conversation.character.role}. Bio: ${conversation.character.biography}. Responde en maximo 20 palabras.`;
+    const systemPrompt = buildSystemPrompt(conversation.character);
+
     logger.debug("[chat.generateAiResponse] context_ready", {
       conversationId,
       characterId: conversation.character.id,
@@ -161,7 +159,7 @@ export class ChatService {
     userText: string,
     trace?: RequestTraceContext
   ): Promise<ChatResponse> {
-    const traceCtx = this.createTraceContext(trace, {
+    const traceCtx = createTraceContext(trace, {
       conversationId,
       userId,
       phase: "process_text_message",
@@ -173,6 +171,7 @@ export class ChatService {
     });
 
     const conversation = await this.getConversation(conversationId, userId);
+
     logger.debug("[chat.processTextMessage] conversation_loaded", {
       ...traceCtx,
       characterId: conversation.character.id,
@@ -202,67 +201,20 @@ export class ChatService {
       assistantMessageId: savedAssistantMessage.id,
     });
 
-    try {
-      const audioBuffer = await this.voice.synthesize(aiResponseText, conversation.character.voiceId);
-      const assistantAudioPath = `${userId}/${conversationId}/${savedAssistantMessage.id}.mp3`;
+    const audioResult = await this.synthesizeAndUpload(
+      aiResponseText,
+      conversation.character.voiceId,
+      savedAssistantMessage.id,
+      userId,
+      conversationId,
+      traceCtx
+    );
 
-      logger.debug("[chat.processTextMessage] tts_generated", {
-        ...traceCtx,
-        assistantMessageId: savedAssistantMessage.id,
-        ttsVoiceId: conversation.character.voiceId,
-        audioBytes: audioBuffer.length,
-        assistantAudioPath,
-        storageBucket: this.storageBucket,
-      });
-
-      const uploadedAssistantAudioPath = await this.storageService.uploadFile(
-        this.storageBucket,
-        assistantAudioPath,
-        audioBuffer,
-        "audio/mp3"
-      );
-
-      logger.debug("[chat.processTextMessage] assistant_audio_uploaded", {
-        ...traceCtx,
-        assistantMessageId: savedAssistantMessage.id,
-        uploadedAssistantAudioPath,
-      });
-
-      await this.messageRepo.update(
-        { id: savedAssistantMessage.id },
-        {
-          audioPath: uploadedAssistantAudioPath,
-          audioStorageId: uploadedAssistantAudioPath,
-          mediaType: "audio/mp3",
-        }
-      );
-
-      return {
-        text: aiResponseText,
-        audioBase64: audioBuffer.toString("base64"),
-      };
-    } catch (error) {
-      logger.error("[chat.processTextMessage] tts_or_upload_failed", {
-        ...traceCtx,
-        assistantMessageId: savedAssistantMessage.id,
-        ttsVoiceId: conversation.character.voiceId,
-        error: this.toErrorPayload(error),
-      });
-
-      return {
-        text: aiResponseText,
-        warning: {
-          code: "TTS_FAILED",
-          message: "La respuesta se generó, pero el audio no está disponible.",
-          stage: "tts",
-          retryable: true,
-        },
-      };
-    }
+    return { text: aiResponseText, ...audioResult };
   }
 
   async processAudioMessage(input: ProcessAudioMessageInput): Promise<{ transcription: string } & ChatResponse> {
-    const traceCtx = this.createTraceContext(input.trace, {
+    const traceCtx = createTraceContext(input.trace, {
       conversationId: input.conversationId,
       userId: input.userId,
       phase: "process_audio_message",
@@ -282,10 +234,10 @@ export class ChatService {
       characterVoiceId: conversation.character.voiceId,
     });
 
-    const userAudioExtension = this.getFileExtensionFromMimeType(input.mimeType);
+    const userAudioExtension = getFileExtensionFromMimeType(input.mimeType);
     const audioReference = `audio_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
     const userAudioPath = `${input.userId}/${input.conversationId}/${audioReference}.${userAudioExtension}`;
-    const encoding = this.getEncodingFromMimeType(input.mimeType);
+    const encoding = getEncodingFromMimeType(input.mimeType);
 
     logger.debug("[chat.processAudioMessage] user_audio_prepared", {
       ...traceCtx,
@@ -303,14 +255,14 @@ export class ChatService {
       ...traceCtx,
       uploadStatus: uploadResult.status,
       sttStatus: sttResult.status,
-      uploadError: uploadResult.status === "rejected" ? this.toErrorPayload(uploadResult.reason) : undefined,
-      sttError: sttResult.status === "rejected" ? this.toErrorPayload(sttResult.reason) : undefined,
+      uploadError: uploadResult.status === "rejected" ? serializeError(uploadResult.reason) : undefined,
+      sttError: sttResult.status === "rejected" ? serializeError(sttResult.reason) : undefined,
     });
 
     if (sttResult.status === "rejected") {
       logger.error("[chat.processAudioMessage] stt_failed", {
         ...traceCtx,
-        error: this.toErrorPayload(sttResult.reason),
+        error: serializeError(sttResult.reason),
       });
       throw new ChatFlowError(
         "STT_FAILED",
@@ -322,10 +274,9 @@ export class ChatService {
     }
 
     const transcription = sttResult.value.trim();
+
     if (!transcription) {
-      logger.warn("[chat.processAudioMessage] no_speech_detected", {
-        ...traceCtx,
-      });
+      logger.warn("[chat.processAudioMessage] no_speech_detected", { ...traceCtx });
       throw new ChatFlowError(
         "NO_SPEECH",
         "No se detectó habla en el audio. Inténtalo de nuevo.",
@@ -342,7 +293,7 @@ export class ChatService {
     if (uploadResult.status === "rejected") {
       logger.error("[chat.processAudioMessage] audio_upload_failed", {
         ...traceCtx,
-        error: this.toErrorPayload(uploadResult.reason),
+        error: serializeError(uploadResult.reason),
       });
       throw new ChatFlowError(
         "AUDIO_UPLOAD_FAILED",
@@ -388,64 +339,15 @@ export class ChatService {
       aiResponseLength: aiResponseText.length,
     });
 
-    try {
-      const assistantAudioBuffer = await this.voice.synthesize(aiResponseText, conversation.character.voiceId);
-      const assistantAudioPath = `${input.userId}/${input.conversationId}/${savedAssistantMessage.id}.mp3`;
+    const audioResult = await this.synthesizeAndUpload(
+      aiResponseText,
+      conversation.character.voiceId,
+      savedAssistantMessage.id,
+      input.userId,
+      input.conversationId,
+      traceCtx
+    );
 
-      logger.debug("[chat.processAudioMessage] assistant_tts_generated", {
-        ...traceCtx,
-        assistantMessageId: savedAssistantMessage.id,
-        ttsVoiceId: conversation.character.voiceId,
-        audioBytes: assistantAudioBuffer.length,
-        assistantAudioPath,
-        storageBucket: this.storageBucket,
-      });
-
-      const uploadedAssistantAudioPath = await this.storageService.uploadFile(
-        this.storageBucket,
-        assistantAudioPath,
-        assistantAudioBuffer,
-        "audio/mp3"
-      );
-
-      logger.debug("[chat.processAudioMessage] assistant_audio_uploaded", {
-        ...traceCtx,
-        assistantMessageId: savedAssistantMessage.id,
-        uploadedAssistantAudioPath,
-      });
-
-      await this.messageRepo.update(
-        { id: savedAssistantMessage.id },
-        {
-          audioPath: uploadedAssistantAudioPath,
-          audioStorageId: uploadedAssistantAudioPath,
-          mediaType: "audio/mp3",
-        }
-      );
-
-      return {
-        transcription,
-        text: aiResponseText,
-        audioBase64: assistantAudioBuffer.toString("base64"),
-      };
-    } catch (error) {
-      logger.error("[chat.processAudioMessage] assistant_tts_or_upload_failed", {
-        ...traceCtx,
-        assistantMessageId: savedAssistantMessage.id,
-        ttsVoiceId: conversation.character.voiceId,
-        error: this.toErrorPayload(error),
-      });
-
-      return {
-        transcription,
-        text: aiResponseText,
-        warning: {
-          code: "TTS_FAILED",
-          message: "La respuesta se generó, pero el audio no está disponible.",
-          stage: "tts",
-          retryable: true,
-        },
-      };
-    }
+    return { transcription, text: aiResponseText, ...audioResult };
   }
 }

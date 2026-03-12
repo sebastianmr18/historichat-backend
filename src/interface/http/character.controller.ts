@@ -1,73 +1,53 @@
 import { Request, Response } from "express";
-import { JwtPayload } from "jsonwebtoken";
 import { AppDataSource } from "../../config/database.js";
 import { Character } from "../../infrastructure/database/entities/Character.js";
-import { Message } from "../../infrastructure/database/entities/Message.js";
+import { logger } from "../../infrastructure/logging/logger.js";
+import { extractUserId } from "../../api/auth.middleware.js";
 
 export class CharacterController {
   private characterRepo = AppDataSource.getRepository(Character);
-  private messageRepo = AppDataSource.getRepository(Message);
-
-  private getUserId(req: Request): string | undefined {
-    if (!req.user) return undefined;
-    if (typeof req.user === "string") return req.user;
-    console.log(req.user);
-
-    const payload = req.user as JwtPayload & { id?: string };
-    return (typeof payload.sub === "string" ? payload.sub : undefined) ?? payload.id;
-  }
 
   async getAll(req: Request, res: Response) {
     try {
-      const characterRepo = AppDataSource.getRepository(Character);
-      const userId = this.getUserId(req);
-      const characters = await characterRepo.find({
+      const userId = extractUserId(req);
+      const characters = await this.characterRepo.find({
         where: userId
           ? [{ isPublic: true }, { isPublic: false, userId }]
           : { isPublic: true },
       });
       res.json(characters);
     } catch (error: any) {
-      console.error("❌ Error detallado en getAll:", {
+      logger.error("[character.getAll] failed", {
         message: error.message,
         stack: error.stack,
-        query: error.query
+        query: error.query,
       });
-      
-      res.status(500).json({ 
-        error: "Internal Server Error", 
-        details: error.message 
-      });
+      res.status(500).json({ error: "Internal Server Error" });
     }
   }
 
   async getById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const characterRepo = AppDataSource.getRepository(Character);
-      const userId = this.getUserId(req);
-      const character = await characterRepo.findOne({
+      const userId = extractUserId(req);
+      const character = await this.characterRepo.findOne({
         where: userId
           ? [{ id: id as any, isPublic: true }, { id: id as any, isPublic: false, userId }]
           : { id: id as any, isPublic: true },
       });
-      
+
       if (!character) {
         return res.status(404).json({ error: "Personaje no encontrado" });
       }
-      
+
       res.json(character);
     } catch (error: any) {
-      console.error("❌ Error en getById:", {
+      logger.error("[character.getById] failed", {
         message: error.message,
         stack: error.stack,
-        query: error.query
+        query: error.query,
       });
-      
-      res.status(500).json({ 
-        error: "Internal Server Error", 
-        details: error.message 
-      });
+      res.status(500).json({ error: "Internal Server Error" });
     }
   }
 
@@ -76,25 +56,22 @@ export class CharacterController {
       const { id } = req.params;
       const { voiceId } = req.body;
       const character = await this.characterRepo.findOne({ where: { id: id as any } });
-      
+
       if (!character) {
         return res.status(404).json({ error: "Personaje no encontrado" });
       }
-      
+
       character.voiceId = voiceId;
       await this.characterRepo.save(character);
       res.json(character);
     } catch (error: any) {
-      res.status(500).json({ 
-        error: "Internal Server Error", 
-        details: error.message 
-      });
+      res.status(500).json({ error: "Internal Server Error", details: error.message });
     }
   }
 
   async create(req: Request, res: Response) {
     try {
-      const userId = this.getUserId(req);
+      const userId = extractUserId(req);
 
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
@@ -138,29 +115,12 @@ export class CharacterController {
       const savedCharacter = await this.characterRepo.save(character);
       return res.status(201).json(savedCharacter);
     } catch (error: any) {
-      console.error("❌ Error en create:", {
+      logger.error("[character.create] failed", {
         message: error.message,
         stack: error.stack,
         query: error.query,
       });
-
-      return res.status(500).json({
-        error: "Internal Server Error",
-        details: error.message,
-      });
-    }
-  }
-
-  async getMessages(req: Request, res: Response) {
-    try {
-      console.log("Fetching messages for conversation ID:", req.params.id);
-      const messages = await this.messageRepo.find({
-        where: { conversationId: req.params.id as any },
-        order: { timestamp: "ASC" },
-      });
-      res.json(messages);
-    } catch (error) {
-      res.status(500).json({ error: "Internal Server Error" });
+      return res.status(500).json({ error: "Internal Server Error" });
     }
   }
 }

@@ -4,6 +4,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import app from './app.js';
 import { env } from './config/env.js';
 import { AppDataSource } from './config/database.js';
+import { logger } from './infrastructure/logging/logger.js';
 
 import { GeminiService } from './infrastructure/ai/gemini.service.js';
 import { GoogleCloudVoiceAdapter } from './infrastructure/ai/google-cloud-voice.adapter.js';
@@ -15,7 +16,7 @@ import { storageService } from './interface/storage/storage.service.js';
 const startServer = async () => {
   try {
     await AppDataSource.initialize();
-    console.log("💾 Conexión a PostgreSQL (TypeORM) establecida.");
+    logger.info("Conexión a PostgreSQL (TypeORM) establecida");
 
     const geminiService = new GeminiService();
     const googleCloudVoiceAdapter = new GoogleCloudVoiceAdapter();
@@ -35,22 +36,18 @@ const startServer = async () => {
     });
 
     new ChatGateway(io, chatService);
-    console.log("🛰️ ChatGateway inicializado.");
+    logger.info("ChatGateway inicializado");
 
     const PORT = env.PORT || 8000;
     httpServer.listen(PORT, () => {
-      console.log(`
-      🚀 SISTEMA ACTIVO
-      Puerto: ${PORT}
-      Modo: ${env.NODE_ENV}
-      `);
+      logger.info(`Servidor activo — puerto: ${PORT}, modo: ${env.NODE_ENV}`);
     });
 
     const shutdown = async () => {
-      console.log('\n🛑 Apagando servicios...');
+      logger.info("Apagando servicios...");
       await AppDataSource.destroy();
       httpServer.close(() => {
-        console.log('Servidor HTTP cerrado.');
+        logger.info("Servidor HTTP cerrado");
         process.exit(0);
       });
     };
@@ -58,7 +55,7 @@ const startServer = async () => {
     process.on('SIGINT', shutdown);
 
   } catch (error) {
-    console.error("❌ Fallo en el arranque:", error);
+    logger.error("Fallo en el arranque del servidor", { error });
     process.exit(1);
   }
 };

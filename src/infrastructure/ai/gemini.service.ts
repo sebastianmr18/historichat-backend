@@ -1,10 +1,11 @@
 import { GoogleGenerativeAI, Content, Part } from "@google/generative-ai";
 import { env } from "../../config/env.js";
 import { Message } from "../database/entities/Message.js";
+import { logger } from "../logging/logger.js";
 
 export class GeminiService {
   private genAI: GoogleGenerativeAI;
-  private model: any;
+  private model: ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
 
   constructor() {
     this.genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
@@ -37,7 +38,7 @@ export class GeminiService {
       }
 
 
-      // 2. Iniciar chat con la instrucción de sistema (Plantilla del personaje)
+      // 3. Iniciar chat con la instrucción de sistema (Plantilla del personaje)
       const chat = this.model.startChat({
         history: chatHistory,
         systemInstruction: {
@@ -46,7 +47,7 @@ export class GeminiService {
         },
       });
 
-      // 3. Preparar el prompt final incluyendo el contexto RAG
+      // 4. Preparar el prompt final incluyendo el contexto RAG
       const finalPrompt = contextRAG 
         ? `[CONTEXTO RAG]\n${contextRAG}\n\n[PREGUNTA]\n${userQuery}`
         : userQuery;
@@ -56,7 +57,7 @@ export class GeminiService {
       
       return response.text();
     } catch (error) {
-      console.error("❌ Error en Gemini Service:", error);
+      logger.error("[gemini] generateResponse failed", { error });
       throw new Error("Error al generar respuesta con el LLM.");
     }
   }
