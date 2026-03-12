@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Relation } from "typeorm";
 import { Conversation } from "./Conversation.js";
+import { MessageBlock, MessageSchemaVersion } from "../../../shared/types.js";
 
 @Entity("app_message")
 export class Message {
@@ -11,6 +12,12 @@ export class Message {
 
   @Column({ type: "text" })
   content: string;
+
+  @Column({ type: "varchar", length: 20, name: "schema_version", default: "v1_plain" })
+  schemaVersion: MessageSchemaVersion;
+
+  @Column({ type: "jsonb", nullable: true })
+  blocks?: MessageBlock[] | null;
 
   @CreateDateColumn({ name: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   timestamp: Date;

@@ -36,9 +36,40 @@ export interface ProcessAudioMessageInput {
   trace?: RequestTraceContext;
 }
 
+export type MessageSchemaVersion = "v1_plain" | "v2_blocks";
+
+export interface MessageTextBlock {
+  id?: string;
+  type: "text";
+  content: string;
+}
+
+export interface InfoCardItem {
+  label: string;
+  value: string;
+}
+
+export interface InfoCardProps {
+  title: string;
+  description?: string;
+  items?: InfoCardItem[];
+}
+
+export interface MessageComponentBlock {
+  id?: string;
+  type: "component";
+  componentName: string;
+  props: Record<string, unknown>;
+}
+
+export type MessageBlock = MessageTextBlock | MessageComponentBlock;
+
 export interface ChatResponse {
+  messageId?: number;
   text: string;
   audioBase64?: string;
+  schemaVersion?: MessageSchemaVersion;
+  blocks?: MessageBlock[];
   warning?: {
     code: string;
     message: string;

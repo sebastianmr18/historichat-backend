@@ -3,7 +3,7 @@ import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
 import { GeminiService } from "../../infrastructure/ai/gemini.service.js";
-import { ChatResponse, IStorageService, ITextToSpeech, ISpeechToText, ProcessAudioMessageInput, RequestTraceContext } from "../../shared/types.js";
+import { ChatResponse, IStorageService, ITextToSpeech, ISpeechToText, MessageBlock, MessageSchemaVersion, ProcessAudioMessageInput, RequestTraceContext } from "../../shared/types.js";
 import { ChromaRepository } from "../../infrastructure/vector/chroma.repository.js";
 import { env } from "../../config/env.js";
 import { logger } from "../../infrastructure/logging/logger.js";
@@ -118,6 +118,169 @@ export class ChatService {
     return new ChatFlowError(fallbackCode, fallbackMessage, "unknown", true, error);
   }
 
+  private buildTextBlocks(text: string): MessageBlock[] {
+    return [{ type: "text", content: text }];
+  }
+
+  private deriveTextFromBlocks(blocks: MessageBlock[]): string {
+    const textBlocks = blocks
+      .filter((block): block is Extract<MessageBlock, { type: "text" }> => block.type === "text")
+      .map((block) => block.content?.trim())
+      .filter((value): value is string => Boolean(value));
+
+    return textBlocks.join("\n").trim();
+  }
+
+  private isValidInfoCardProps(props: unknown): boolean {
+    if (!props || typeof props !== "object" || Array.isArray(props)) {
+      return false;
+    }
+
+    const value = props as Record<string, unknown>;
+    if (typeof value.title !== "string" || !value.title.trim()) {
+      return false;
+    }
+
+    if (value.description !== undefined && typeof value.description !== "string") {
+      return false;
+    }
+
+    if (value.items === undefined) {
+      return true;
+    }
+
+    if (!Array.isArray(value.items)) {
+      return false;
+    }
+
+    return value.items.every((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return false;
+      }
+
+      const casted = item as Record<string, unknown>;
+      return typeof casted.label === "string" && typeof casted.value === "string";
+    });
+  }
+
+  private normalizeBlocks(rawBlocks: unknown): MessageBlock[] | null {
+    if (!Array.isArray(rawBlocks)) {
+      return null;
+    }
+
+    const normalized: MessageBlock[] = [];
+
+    for (const rawBlock of rawBlocks) {
+      if (!rawBlock || typeof rawBlock !== "object" || Array.isArray(rawBlock)) {
+        continue;
+      }
+
+      const block = rawBlock as Record<string, unknown>;
+      const blockType = typeof block.type === "string" ? block.type : undefined;
+
+      if (blockType === "text") {
+        if (typeof block.content !== "string" || !block.content.trim()) {
+          continue;
+        }
+
+        normalized.push({
+          id: typeof block.id === "string" ? block.id : undefined,
+          type: "text",
+          content: block.content,
+        });
+        continue;
+      }
+
+      if (blockType === "component") {
+        const componentNameRaw =
+          typeof block.componentName === "string"
+            ? block.componentName
+            : typeof block.component_name === "string"
+              ? block.component_name
+              : undefined;
+
+        if (!componentNameRaw) {
+          continue;
+        }
+
+        if (!block.props || typeof block.props !== "object" || Array.isArray(block.props)) {
+          continue;
+        }
+
+        // MVP: only InfoCard is accepted for component blocks.
+        if (componentNameRaw === "InfoCard" && !this.isValidInfoCardProps(block.props)) {
+          continue;
+        }
+
+        normalized.push({
+          id: typeof block.id === "string" ? block.id : undefined,
+          type: "component",
+          componentName: componentNameRaw,
+          props: block.props as Record<string, unknown>,
+        });
+      }
+    }
+
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private normalizeAssistantOutput(rawText: string): {
+    text: string;
+    schemaVersion: MessageSchemaVersion;
+    blocks: MessageBlock[];
+  } {
+    const trimmed = rawText.trim();
+
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const schemaVersionRaw =
+        typeof parsed.schemaVersion === "string"
+          ? parsed.schemaVersion
+          : typeof parsed.schema_version === "string"
+            ? parsed.schema_version
+            : undefined;
+      const normalizedBlocks = this.normalizeBlocks(parsed.blocks);
+      const fallbackContent = typeof parsed.content === "string" ? parsed.content.trim() : "";
+
+      if (normalizedBlocks) {
+        const derived = this.deriveTextFromBlocks(normalizedBlocks);
+        const text = fallbackContent || derived || trimmed;
+        const schemaVersion: MessageSchemaVersion =
+          schemaVersionRaw === "v1_plain" || schemaVersionRaw === "v2_blocks"
+            ? schemaVersionRaw
+            : "v2_blocks";
+
+        return {
+          text,
+          schemaVersion,
+          blocks: normalizedBlocks,
+        };
+      }
+
+      // If JSON is valid but blocks are malformed, keep meaningful content instead of raw JSON string.
+      if (fallbackContent) {
+        const schemaVersion: MessageSchemaVersion =
+          schemaVersionRaw === "v1_plain" || schemaVersionRaw === "v2_blocks"
+            ? schemaVersionRaw
+            : "v2_blocks";
+
+        return {
+          text: fallbackContent,
+          schemaVersion,
+          blocks: this.buildTextBlocks(fallbackContent),
+        };
+      }
+    } catch {
+      // Non-JSON output keeps legacy behavior.
+    }
+
+    return {
+      text: rawText,
+      schemaVersion: "v2_blocks",
+      blocks: this.buildTextBlocks(rawText),
+    };
+  }
+
   private async generateAiResponse(conversation: Conversation, userText: string) {
     const conversationId = conversation.id;
 
@@ -132,7 +295,6 @@ export class ChatService {
       conversation.character.vectorDbName || "default"
     );
 
-    const systemPrompt = `Actúa como ${conversation.character.name}. Rol: ${conversation.character.role}. Bio: ${conversation.character.biography}. Responde en maximo 20 palabras.`;
     logger.debug("[chat.generateAiResponse] context_ready", {
       conversationId,
       characterId: conversation.character.id,
@@ -140,19 +302,19 @@ export class ChatService {
       historyCount: history.length,
       userTextLength: userText.length,
       contextLength: context?.length ?? 0,
-      systemPromptLength: systemPrompt.length,
     });
-    logger.debug("[systemPrompt]", { systemPrompt });
     logger.debug("[context]", { context });
 
-    const aiResponseText = await this.gemini.generateResponse(
-      systemPrompt,
+    const structuredResponse = await this.gemini.generateResponse(
+      conversation.character.name,
+      conversation.character.role,
+      conversation.character.biography,
       history as any,
       userText,
       context
     );
 
-    return aiResponseText;
+    return structuredResponse;
   }
 
   async processTextMessage(
@@ -179,22 +341,40 @@ export class ChatService {
       characterVoiceId: conversation.character.voiceId,
     });
 
-    let aiResponseText: string;
+    let structuredResponse: { content: string; blocks: any[] };
 
     try {
-      aiResponseText = await this.generateAiResponse(conversation, userText);
+      structuredResponse = await this.generateAiResponse(conversation, userText);
     } catch (error) {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta");
     }
 
     logger.debug("[chat.processTextMessage] ai_response_generated", {
       ...traceCtx,
-      aiResponseLength: aiResponseText.length,
+      aiResponseLength: structuredResponse.content.length,
+      blocksCount: structuredResponse.blocks?.length ?? 0,
     });
 
+    const normalizedAssistantOutput = this.normalizeAssistantOutput(
+      JSON.stringify(structuredResponse)
+    );
+
     const savedAssistantMessage = await AppDataSource.transaction(async (manager) => {
-      await manager.save(Message, { conversationId, role: "user", content: userText });
-      return manager.save(Message, { conversationId, role: "assistant", content: aiResponseText });
+      await manager.save(Message, {
+        conversationId,
+        role: "user",
+        content: userText,
+        schemaVersion: "v1_plain",
+        blocks: this.buildTextBlocks(userText),
+      });
+
+      return manager.save(Message, {
+        conversationId,
+        role: "assistant",
+        content: normalizedAssistantOutput.text,
+        schemaVersion: normalizedAssistantOutput.schemaVersion,
+        blocks: normalizedAssistantOutput.blocks,
+      });
     });
 
     logger.debug("[chat.processTextMessage] messages_saved", {
@@ -203,7 +383,7 @@ export class ChatService {
     });
 
     try {
-      const audioBuffer = await this.voice.synthesize(aiResponseText, conversation.character.voiceId);
+      const audioBuffer = await this.voice.synthesize(normalizedAssistantOutput.text, conversation.character.voiceId);
       const assistantAudioPath = `${userId}/${conversationId}/${savedAssistantMessage.id}.mp3`;
 
       logger.debug("[chat.processTextMessage] tts_generated", {
@@ -238,8 +418,11 @@ export class ChatService {
       );
 
       return {
-        text: aiResponseText,
+        messageId: savedAssistantMessage.id,
+        text: normalizedAssistantOutput.text,
         audioBase64: audioBuffer.toString("base64"),
+        schemaVersion: normalizedAssistantOutput.schemaVersion,
+        blocks: normalizedAssistantOutput.blocks,
       };
     } catch (error) {
       logger.error("[chat.processTextMessage] tts_or_upload_failed", {
@@ -250,7 +433,10 @@ export class ChatService {
       });
 
       return {
-        text: aiResponseText,
+        messageId: savedAssistantMessage.id,
+        text: normalizedAssistantOutput.text,
+        schemaVersion: normalizedAssistantOutput.schemaVersion,
+        blocks: normalizedAssistantOutput.blocks,
         warning: {
           code: "TTS_FAILED",
           message: "La respuesta se generó, pero el audio no está disponible.",
@@ -355,19 +541,25 @@ export class ChatService {
 
     const uploadedUserAudioPath = uploadResult.value;
 
-    let aiResponseText: string;
+    let structuredResponse: { content: string; blocks: any[] };
 
     try {
-      aiResponseText = await this.generateAiResponse(conversation, transcription);
+      structuredResponse = await this.generateAiResponse(conversation, transcription);
     } catch (error) {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta");
     }
+
+    const normalizedAssistantOutput = this.normalizeAssistantOutput(
+      JSON.stringify(structuredResponse)
+    );
 
     const { savedAssistantMessage } = await AppDataSource.transaction(async (manager) => {
       await manager.save(Message, {
         conversationId: input.conversationId,
         role: "user",
         content: transcription,
+        schemaVersion: "v1_plain",
+        blocks: this.buildTextBlocks(transcription),
         mediaType: input.mimeType,
         audioPath: uploadedUserAudioPath,
         audioStorageId: uploadedUserAudioPath,
@@ -376,7 +568,9 @@ export class ChatService {
       const assistantMessage = await manager.save(Message, {
         conversationId: input.conversationId,
         role: "assistant",
-        content: aiResponseText,
+        content: normalizedAssistantOutput.text,
+        schemaVersion: normalizedAssistantOutput.schemaVersion,
+        blocks: normalizedAssistantOutput.blocks,
       });
 
       return { savedAssistantMessage: assistantMessage };
@@ -385,11 +579,14 @@ export class ChatService {
     logger.debug("[chat.processAudioMessage] assistant_message_saved", {
       ...traceCtx,
       assistantMessageId: savedAssistantMessage.id,
-      aiResponseLength: aiResponseText.length,
+      aiResponseLength: normalizedAssistantOutput.text.length,
     });
 
     try {
-      const assistantAudioBuffer = await this.voice.synthesize(aiResponseText, conversation.character.voiceId);
+      const assistantAudioBuffer = await this.voice.synthesize(
+        normalizedAssistantOutput.text,
+        conversation.character.voiceId
+      );
       const assistantAudioPath = `${input.userId}/${input.conversationId}/${savedAssistantMessage.id}.mp3`;
 
       logger.debug("[chat.processAudioMessage] assistant_tts_generated", {
@@ -425,8 +622,11 @@ export class ChatService {
 
       return {
         transcription,
-        text: aiResponseText,
+        messageId: savedAssistantMessage.id,
+        text: normalizedAssistantOutput.text,
         audioBase64: assistantAudioBuffer.toString("base64"),
+        schemaVersion: normalizedAssistantOutput.schemaVersion,
+        blocks: normalizedAssistantOutput.blocks,
       };
     } catch (error) {
       logger.error("[chat.processAudioMessage] assistant_tts_or_upload_failed", {
@@ -438,7 +638,10 @@ export class ChatService {
 
       return {
         transcription,
-        text: aiResponseText,
+        messageId: savedAssistantMessage.id,
+        text: normalizedAssistantOutput.text,
+        schemaVersion: normalizedAssistantOutput.schemaVersion,
+        blocks: normalizedAssistantOutput.blocks,
         warning: {
           code: "TTS_FAILED",
           message: "La respuesta se generó, pero el audio no está disponible.",

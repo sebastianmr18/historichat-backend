@@ -3,6 +3,7 @@ import { JwtPayload } from "jsonwebtoken";
 import { ChatFlowError, ChatService } from "../../application/services/chat.service.js";
 import { SupabaseTokenVerifier } from "../../infrastructure/auth/SupabaseTokenVerifier.js";
 import { logger } from "../../infrastructure/logging/logger.js";
+import { MessageBlock, MessageSchemaVersion } from "../../shared/types.js";
 
 export class ChatGateway {
   private verifier = new SupabaseTokenVerifier();
@@ -65,6 +66,35 @@ export class ChatGateway {
       code: "UNEXPECTED_ERROR",
       stage: "unknown",
       retryable: true,
+    };
+  }
+
+  private toOutgoingBlocks(text: string, blocks?: MessageBlock[]): MessageBlock[] {
+    if (Array.isArray(blocks) && blocks.length > 0) {
+      return blocks;
+    }
+
+    return [{ type: "text", content: text }];
+  }
+
+  private toAiMessagePayload(payload: {
+    messageId?: number;
+    text: string;
+    audio?: string;
+    schemaVersion?: MessageSchemaVersion;
+    blocks?: MessageBlock[];
+  }) {
+    const schemaVersion = payload.schemaVersion ?? "v1_plain";
+    const blocks = this.toOutgoingBlocks(payload.text, payload.blocks);
+
+    return {
+      // Legacy fields kept for backward compatibility.
+      text: payload.text,
+      audio: payload.audio,
+      // GenUI fields.
+      message_id: payload.messageId,
+      schema_version: schemaVersion,
+      blocks,
     };
   }
 
@@ -170,10 +200,16 @@ export class ChatGateway {
 
           socket.emit("transcription", { text: result.transcription });
 
-          this.io.to(data.conversationId).emit("ai_message", {
-            text: result.text,
-            audio: result.audioBase64,
-          });
+          this.io.to(data.conversationId).emit(
+            "ai_message",
+            this.toAiMessagePayload({
+              messageId: result.messageId,
+              text: result.text,
+              audio: result.audioBase64,
+              schemaVersion: result.schemaVersion,
+              blocks: result.blocks,
+            })
+          );
 
           if (result.warning) {
             socket.emit("error", result.warning);
@@ -221,10 +257,18 @@ export class ChatGateway {
       });
       
       // Emitir respuesta final a la sala de la conversación
-      this.io.to(conversationId).emit("ai_message", {
-        text: result.text,
-        audio: result.audioBase64
-      });
+      this.io.to(
+        conversationId
+      ).emit(
+        "ai_message",
+        this.toAiMessagePayload({
+          messageId: result.messageId,
+          text: result.text,
+          audio: result.audioBase64,
+          schemaVersion: result.schemaVersion,
+          blocks: result.blocks,
+        })
+      );
 
       if (result.warning) {
         socket.emit("error", result.warning);

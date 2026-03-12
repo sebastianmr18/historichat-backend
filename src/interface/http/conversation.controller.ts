@@ -7,8 +7,21 @@ import { Conversation } from "../../infrastructure/database/entities/Conversatio
 import { Message } from "../../infrastructure/database/entities/Message.js";
 import { logger } from "../../infrastructure/logging/logger.js";
 import { storageService } from "../storage/storage.service.js";
+import { MessageBlock, MessageSchemaVersion } from "../../shared/types.js";
 
 export class ConversationController {
+  private toBlocks(content: string, blocks?: MessageBlock[] | null): MessageBlock[] {
+    if (Array.isArray(blocks) && blocks.length > 0) {
+      return blocks;
+    }
+
+    return [{ type: "text", content }];
+  }
+
+  private toSchemaVersion(schemaVersion?: MessageSchemaVersion | null): MessageSchemaVersion {
+    return schemaVersion === "v2_blocks" ? "v2_blocks" : "v1_plain";
+  }
+
   private toErrorPayload(error: unknown) {
     if (error instanceof Error) {
       return {
@@ -34,8 +47,15 @@ export class ConversationController {
 
     const mappedMessages = await Promise.all(
       messages.map(async (message) => {
+        const schemaVersion = this.toSchemaVersion(message.schemaVersion);
+        const blocks = this.toBlocks(message.content, message.blocks);
+
         if (!message.audioPath) {
-          return message;
+          return {
+            ...message,
+            schemaVersion,
+            blocks,
+          };
         }
 
         try {
@@ -47,11 +67,15 @@ export class ConversationController {
 
           return {
             ...message,
+            schemaVersion,
+            blocks,
             audioUrl,
           };
         } catch {
           return {
             ...message,
+            schemaVersion,
+            blocks,
             audioUrl: null,
           };
         }
