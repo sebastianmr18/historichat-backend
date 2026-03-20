@@ -81,10 +81,20 @@ export class CharacterController {
         name,
         role,
         biography,
+        description,
         keyTraits,
         speechTics,
         vectorDbName,
         voiceId,
+        themeColor,
+        themeColorLight,
+        years,
+        category,
+        epoch,
+        quote,
+        imageUrl,
+        badge,
+        topics,
         isPublic,
       } = req.body ?? {};
 
@@ -100,14 +110,36 @@ export class CharacterController {
         return res.status(400).json({ error: "El campo 'biography' es obligatorio" });
       }
 
+      if (badge !== undefined && badge !== null && badge !== "popular" && badge !== "new") {
+        return res.status(400).json({ error: "El campo 'badge' debe ser 'popular' o 'new'" });
+      }
+
+      if (
+        topics !== undefined &&
+        topics !== null &&
+        (!Array.isArray(topics) || topics.some((topic) => typeof topic !== "string"))
+      ) {
+        return res.status(400).json({ error: "El campo 'topics' debe ser un arreglo de strings" });
+      }
+
       const character = this.characterRepo.create({
         name: name.trim(),
         role: role.trim(),
         biography: biography.trim(),
+        description: typeof description === "string" ? description.trim() : undefined,
         keyTraits: Array.isArray(keyTraits) ? keyTraits : [],
         speechTics: Array.isArray(speechTics) ? speechTics : [],
         vectorDbName: typeof vectorDbName === "string" ? vectorDbName : "",
         voiceId: typeof voiceId === "string" ? voiceId : undefined,
+        themeColor: typeof themeColor === "string" ? themeColor : undefined,
+        themeColorLight: typeof themeColorLight === "string" ? themeColorLight : undefined,
+        years: typeof years === "string" ? years : undefined,
+        category: typeof category === "string" ? category : undefined,
+        epoch: typeof epoch === "string" ? epoch : undefined,
+        quote: typeof quote === "string" ? quote : undefined,
+        imageUrl: typeof imageUrl === "string" ? imageUrl : undefined,
+        badge: badge === "popular" || badge === "new" ? badge : undefined,
+        topics: Array.isArray(topics) ? topics : [],
         isPublic: typeof isPublic === "boolean" ? isPublic : false,
         userId,
       });
