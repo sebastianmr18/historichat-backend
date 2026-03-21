@@ -15,11 +15,50 @@ export class ConversationController {
   private conversationRepo = AppDataSource.getRepository(Conversation);
   private messageRepo = AppDataSource.getRepository(Message);
 
+  private isDebateConversation(conversation: Conversation): boolean {
+    return Boolean(conversation.secondaryCharacterId);
+  }
+
+  private getSpeakerForMessage(conversation: Conversation, message: any) {
+    if (message.speakerCharacter) {
+      return {
+        speakerId: message.speakerCharacter.id,
+        speakerName: message.speakerCharacter.name,
+      };
+    }
+
+    // Backward compatibility for legacy assistant messages without speaker_character_id.
+    if (message.role === "assistant" && conversation.character) {
+      return {
+        speakerId: conversation.character.id,
+        speakerName: conversation.character.name,
+      };
+    }
+
+    return {
+      speakerId: null,
+      speakerName: null,
+    };
+  }
+
+  private shapeConversationPayload(conversation: Conversation, mappedMessages: any[]) {
+    const mode = this.isDebateConversation(conversation) ? "debate" : "single";
+    return {
+      ...conversation,
+      mode,
+      primaryCharacter: conversation.character,
+      secondaryCharacter: conversation.secondaryCharacter ?? null,
+      messages: mappedMessages,
+    };
+  }
+
   private async withSignedUrlsForConversation(conversation: Conversation) {
     const messages = (conversation.messages ?? []) as any[];
 
     const mappedMessages = await Promise.all(
       messages.map(async (message) => {
+        const speaker = this.getSpeakerForMessage(conversation, message);
+
         if (!message.audioPath) return message;
 
         try {
@@ -28,14 +67,33 @@ export class ConversationController {
             message.audioPath,
             env.SIGNED_URL_EXPIRES_SECONDS
           );
-          return { ...message, audioUrl };
+          return {
+            ...message,
+            ...speaker,
+            audioUrl,
+          };
         } catch {
-          return { ...message, audioUrl: null };
+          return {
+            ...message,
+            ...speaker,
+            audioUrl: null,
+          };
         }
       })
     );
 
-    return { ...conversation, messages: mappedMessages };
+    const messagesWithSpeaker = mappedMessages.map((message) => {
+      if (Object.prototype.hasOwnProperty.call(message, "speakerId")) {
+        return message;
+      }
+      const speaker = this.getSpeakerForMessage(conversation, message);
+      return {
+        ...message,
+        ...speaker,
+      };
+    });
+
+    return this.shapeConversationPayload(conversation, messagesWithSpeaker);
   }
 
   private withSignedUrls(conversations: Conversation[]) {
@@ -60,7 +118,11 @@ export class ConversationController {
     try {
       const conversations = await this.conversationRepo.find({
         where: { userId },
-        relations: { character: true, messages: true },
+        relations: {
+          character: true,
+          secondaryCharacter: true,
+          messages: { speakerCharacter: true },
+        },
         order: { createdAt: "DESC", messages: { timestamp: "ASC", id: "ASC" } },
       });
       const conversationsWithAudioUrls = await this.withSignedUrls(conversations);
@@ -97,6 +159,66 @@ export class ConversationController {
       res.status(201).json(savedConversation);
     } catch (error) {
       res.status(500).json({ error: "Error al crear la conversación" });
+    }
+  }
+
+  async createDebate(req: Request, res: Response) {
+    const { characterIdA, characterIdB } = req.body;
+    const userId = extractUserId(req);
+
+    if (!userId) return res.status(401).json({ error: "Usuario no autenticado" });
+    if (!characterIdA || !characterIdB) {
+      return res.status(400).json({ error: "characterIdA y characterIdB son requeridos" });
+    }
+    if (characterIdA === characterIdB) {
+      return res.status(400).json({ error: "characterIdA y characterIdB deben ser distintos" });
+    }
+
+    try {
+      const [characterA, characterB] = await Promise.all([
+        this.characterRepo.findOne({
+          where: [
+            { id: characterIdA as any, isPublic: true },
+            { id: characterIdA as any, isPublic: false, userId },
+          ],
+        }),
+        this.characterRepo.findOne({
+          where: [
+            { id: characterIdB as any, isPublic: true },
+            { id: characterIdB as any, isPublic: false, userId },
+          ],
+        }),
+      ]);
+
+      if (!characterA || !characterB) {
+        return res.status(404).json({ error: "Uno o ambos personajes no fueron encontrados o no son accesibles" });
+      }
+
+      const newConversation = this.conversationRepo.create({
+        character: { id: characterA.id },
+        secondaryCharacter: { id: characterB.id },
+        secondaryCharacterId: characterB.id,
+        userId,
+      });
+
+      const savedConversation = await this.conversationRepo.save(newConversation);
+      const persistedConversation = await this.conversationRepo.findOne({
+        where: { id: savedConversation.id, userId },
+        relations: {
+          character: true,
+          secondaryCharacter: true,
+          messages: { speakerCharacter: true },
+        },
+      });
+
+      if (!persistedConversation) {
+        return res.status(500).json({ error: "No se pudo recuperar la conversación creada" });
+      }
+
+      const payload = await this.withSignedUrlsForConversation(persistedConversation);
+      res.status(201).json(payload);
+    } catch (error) {
+      res.status(500).json({ error: "Error al crear la conversación de debate" });
     }
   }
 
@@ -158,7 +280,11 @@ export class ConversationController {
     try {
       const conversation = await this.conversationRepo.findOne({
         where: { id: req.params.id as any, userId },
-        relations: { character: true, messages: true },
+        relations: {
+          character: true,
+          secondaryCharacter: true,
+          messages: { speakerCharacter: true },
+        },
         order: { messages: { timestamp: "ASC", id: "ASC" } },
       });
 

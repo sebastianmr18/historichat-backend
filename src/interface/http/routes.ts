@@ -13,6 +13,7 @@ router.get('/characters/:id', (req, res) => characterCtrl.getById(req, res));
 router.put('/characters/:id/voice', (req, res) => characterCtrl.updateVoiceId(req, res));
 router.get('/conversations', (req, res) => conversationCtrl.list(req, res));
 router.post('/conversations', (req, res) => conversationCtrl.create(req, res));
+router.post('/conversations/debate', (req, res) => conversationCtrl.createDebate(req, res));
 router.delete('/conversations/:id', (req, res) => conversationCtrl.destroy(req, res));
 router.get('/conversations/:id', (req, res) => conversationCtrl.retrieve(req, res));
 router.post('/query', ragQueryController);

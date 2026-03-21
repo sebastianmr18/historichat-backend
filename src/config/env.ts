@@ -29,6 +29,7 @@ const envSchema = z.object({
   CHROMA_TENANT: z.string().default('default_tenant'),
   CHROMA_DATABASE: z.string().default('default_database'),
   CHROMA_HOST: z.string().optional(),
+  DEBATE_TTS_ENABLED: z.coerce.boolean().default(true),
 });
 
 const _env = envSchema.safeParse(process.env);

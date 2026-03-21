@@ -74,6 +74,15 @@ export class ChatGateway {
         socket.join(conversationId);
       });
 
+      socket.on("join_debate", (conversationId: string) => {
+        const trace = this.buildTrace(socket, "join_debate", conversationId);
+        socket.join(conversationId);
+        socket.emit("debate_started", {
+          conversationId,
+          traceId: trace.traceId,
+        });
+      });
+
       socket.on("send_text", async (data: { conversationId: string; text: string }) => {
         const userId = socket.data.userId as string;
         const trace = this.buildTrace(socket, "send_text", data.conversationId);
@@ -87,6 +96,16 @@ export class ChatGateway {
       socket.on("send_audio", async (data: { conversationId: string; audioBase64: string; mimeType?: string }) => {
         const trace = this.buildTrace(socket, "send_audio", data.conversationId);
         await this.handleAudioFlow(socket, data, trace);
+      });
+
+      socket.on("send_debate_text", async (data: { conversationId: string; text: string }) => {
+        const userId = socket.data.userId as string;
+        const trace = this.buildTrace(socket, "send_debate_text", data.conversationId);
+        logger.debug("[chat.gateway.send_debate_text] received", {
+          ...trace,
+          textLength: data.text?.length ?? 0,
+        });
+        await this.handleDebateTextFlow(socket, data.conversationId, userId, data.text, trace);
       });
 
       socket.on("disconnect", () =>
@@ -119,6 +138,9 @@ export class ChatGateway {
       this.io.to(conversationId).emit("ai_message", {
         text: result.text,
         audio: result.audioBase64,
+        message_id: result.messageId,
+        speaker_id: result.speakerId,
+        speaker_name: result.speakerName,
       });
 
       if (result.warning) {
@@ -175,6 +197,9 @@ export class ChatGateway {
       this.io.to(data.conversationId).emit("ai_message", {
         text: result.text,
         audio: result.audioBase64,
+        message_id: result.messageId,
+        speaker_id: result.speakerId,
+        speaker_name: result.speakerName,
       });
 
       if (result.warning) {
@@ -194,6 +219,51 @@ export class ChatGateway {
       }
 
       socket.emit("error", clientError);
+    }
+  }
+
+  private async handleDebateTextFlow(
+    socket: Socket,
+    conversationId: string,
+    userId: string,
+    text: string,
+    trace: ReturnType<ChatGateway["buildTrace"]>
+  ) {
+    try {
+      const result = await this.chatService.processDebateMessage(conversationId, userId, text, trace);
+
+      logger.debug("[chat.gateway.send_debate_text] processed", {
+        ...trace,
+        userMessageId: result.userMessageId,
+        responseCount: result.responses.length,
+      });
+
+      this.io.to(conversationId).emit("debate_turn_result", {
+        conversationId,
+        traceId: trace.traceId,
+        user_message_id: result.userMessageId,
+        user_text: result.userText,
+        responses: result.responses.map((response) => ({
+          message_id: response.messageId,
+          text: response.text,
+          speaker_id: response.speakerId,
+          speaker_name: response.speakerName,
+          audio: response.audioBase64,
+          warning: response.warning,
+        })),
+      });
+    } catch (error) {
+      logger.error("[chat.gateway.send_debate_text] failed", {
+        ...trace,
+        conversationId,
+        userId,
+        error: serializeError(error),
+      });
+
+      socket.emit("debate_error", {
+        traceId: trace.traceId,
+        ...this.toClientError(error, "Error procesando turno de debate"),
+      });
     }
   }
 }
