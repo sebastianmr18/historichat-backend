@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { JwtPayload } from "jsonwebtoken";
 import { AppDataSource } from "../../config/database.js";
 import { env } from "../../config/env.js";
 import { Character } from "../../infrastructure/database/entities/Character.js";
@@ -7,36 +6,21 @@ import { Conversation } from "../../infrastructure/database/entities/Conversatio
 import { Message } from "../../infrastructure/database/entities/Message.js";
 import { logger } from "../../infrastructure/logging/logger.js";
 import { storageService } from "../storage/storage.service.js";
+import { extractUserId } from "../../api/auth.middleware.js";
+import { serializeError } from "../../shared/errors.js";
+import { generateTraceId } from "../../shared/trace.js";
 
 export class ConversationController {
-  private toErrorPayload(error: unknown) {
-    if (error instanceof Error) {
-      return {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
-    }
-
-    return { message: String(error) };
-  }
-
-  private getUserId(req: Request): string | undefined {
-    if (!req.user) return undefined;
-    if (typeof req.user === "string") return req.user;
-
-    const payload = req.user as JwtPayload & { id?: string };
-    return (typeof payload.sub === "string" ? payload.sub : undefined) ?? payload.id;
-  }
+  private characterRepo = AppDataSource.getRepository(Character);
+  private conversationRepo = AppDataSource.getRepository(Conversation);
+  private messageRepo = AppDataSource.getRepository(Message);
 
   private async withSignedUrlsForConversation(conversation: Conversation) {
     const messages = (conversation.messages ?? []) as any[];
 
     const mappedMessages = await Promise.all(
       messages.map(async (message) => {
-        if (!message.audioPath) {
-          return message;
-        }
+        if (!message.audioPath) return message;
 
         try {
           const audioUrl = await storageService.getSignedUrl(
@@ -44,28 +28,18 @@ export class ConversationController {
             message.audioPath,
             env.SIGNED_URL_EXPIRES_SECONDS
           );
-
-          return {
-            ...message,
-            audioUrl,
-          };
+          return { ...message, audioUrl };
         } catch {
-          return {
-            ...message,
-            audioUrl: null,
-          };
+          return { ...message, audioUrl: null };
         }
       })
     );
 
-    return {
-      ...conversation,
-      messages: mappedMessages,
-    };
+    return { ...conversation, messages: mappedMessages };
   }
 
-  private async withSignedUrls(conversations: Conversation[]) {
-    return Promise.all(conversations.map((conversation) => this.withSignedUrlsForConversation(conversation)));
+  private withSignedUrls(conversations: Conversation[]) {
+    return Promise.all(conversations.map((c) => this.withSignedUrlsForConversation(c)));
   }
 
   private getMessageAudioPaths(messages: Message[]): string[] {
@@ -75,39 +49,20 @@ export class ConversationController {
         .map((value) => value?.trim())
         .filter((value): value is string => Boolean(value));
     });
-
     return [...new Set(paths)];
   }
 
-  /**
-   * GET /api/conversations
-   * Equivale a Conversation.objects.all()
-   */
   async list(req: Request, res: Response) {
-    const userId = this.getUserId(req);
+    const userId = extractUserId(req);
 
-    if (!userId) {
-      return res.status(401).json({ error: "Usuario no autenticado" });
-    }
+    if (!userId) return res.status(401).json({ error: "Usuario no autenticado" });
 
     try {
-      const repo = AppDataSource.getRepository(Conversation);
-      const conversations = await repo.find({
-              where: { userId },
-              // Cargamos ambas relaciones: el personaje y los mensajes
-              relations: {
-                character: true,
-                messages: true,
-              },
-              // Ordenamos las conversaciones por fecha de creación (desc)
-              // Y los mensajes dentro de ellas por su timestamp (asc)
-              order: {
-                createdAt: "DESC",
-                messages: {
-                  timestamp: "ASC"
-                }
-              }
-            });
+      const conversations = await this.conversationRepo.find({
+        where: { userId },
+        relations: { character: true, messages: true },
+        order: { createdAt: "DESC", messages: { timestamp: "ASC", id: "ASC" } },
+      });
       const conversationsWithAudioUrls = await this.withSignedUrls(conversations);
       res.json(conversationsWithAudioUrls);
     } catch (error) {
@@ -115,25 +70,15 @@ export class ConversationController {
     }
   }
 
-  /**
-   * POST /api/conversations
-   * Reemplaza la lógica de creación del ViewSet
-   */
   async create(req: Request, res: Response) {
     const { characterId } = req.body;
-    const userId = this.getUserId(req);
-    
-    if (!characterId) {
-      return res.status(400).json({ error: "characterId es requerido" });
-    }
+    const userId = extractUserId(req);
 
-    if (!userId) {
-      return res.status(401).json({ error: "Usuario no autenticado" });
-    }
+    if (!characterId) return res.status(400).json({ error: "characterId es requerido" });
+    if (!userId) return res.status(401).json({ error: "Usuario no autenticado" });
 
     try {
-      const characterRepo = AppDataSource.getRepository(Character);
-      const character = await characterRepo.findOne({
+      const character = await this.characterRepo.findOne({
         where: [
           { id: characterId as any, isPublic: true },
           { id: characterId as any, isPublic: false, userId },
@@ -144,47 +89,32 @@ export class ConversationController {
         return res.status(404).json({ error: "Personaje no encontrado o sin permisos" });
       }
 
-      const repo = AppDataSource.getRepository(Conversation);
-      const newConversation = repo.create({
+      const newConversation = this.conversationRepo.create({
         character: { id: character.id },
         userId,
       });
-      const savedConversation = await repo.save(newConversation);
-      
+      const savedConversation = await this.conversationRepo.save(newConversation);
       res.status(201).json(savedConversation);
     } catch (error) {
       res.status(500).json({ error: "Error al crear la conversación" });
     }
   }
 
-  /**
-   * DELETE /api/conversations/:id
-   */
   async destroy(req: Request, res: Response) {
-    const userId = this.getUserId(req);
+    const userId = extractUserId(req);
     const conversationId = req.params.id as any;
-    const traceId = `trace_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    const traceId = generateTraceId();
 
-    if (!userId) {
-      return res.status(401).json({ error: "Usuario no autenticado" });
-    }
+    if (!userId) return res.status(401).json({ error: "Usuario no autenticado" });
 
     try {
-      const conversationRepo = AppDataSource.getRepository(Conversation);
-      const messageRepo = AppDataSource.getRepository(Message);
-
-      const conversation = await conversationRepo.findOne({
+      const conversation = await this.conversationRepo.findOne({
         where: { id: conversationId, userId },
       });
 
-      if (!conversation) {
-        return res.status(404).json({ error: "Conversación no encontrada" });
-      }
+      if (!conversation) return res.status(404).json({ error: "Conversación no encontrada" });
 
-      const messages = await messageRepo.find({
-        where: { conversationId },
-      });
-
+      const messages = await this.messageRepo.find({ where: { conversationId } });
       const audioPaths = this.getMessageAudioPaths(messages);
 
       if (audioPaths.length > 0) {
@@ -204,17 +134,16 @@ export class ConversationController {
             conversationId,
             userId,
             audioPaths,
-            error: this.toErrorPayload(error),
+            error: serializeError(error),
           });
         }
       }
 
-      const result = await conversationRepo.delete({ id: conversationId, userId });
-      
+      const result = await this.conversationRepo.delete({ id: conversationId, userId });
       if (result.affected === 0) {
         return res.status(404).json({ error: "Conversación no encontrada" });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Error al eliminar" });
@@ -222,30 +151,18 @@ export class ConversationController {
   }
 
   async retrieve(req: Request, res: Response) {
-    const userId = this.getUserId(req);
+    const userId = extractUserId(req);
 
-    if (!userId) {
-      return res.status(401).json({ error: "Usuario no autenticado" });
-    }
+    if (!userId) return res.status(401).json({ error: "Usuario no autenticado" });
 
     try {
-      const repo = AppDataSource.getRepository(Conversation);
-      const conversation = await repo.findOne({
+      const conversation = await this.conversationRepo.findOne({
         where: { id: req.params.id as any, userId },
-        relations: {
-          character: true,
-          messages: true,
-        },
-        order: {
-          messages: {
-            timestamp: "ASC",
-          },
-        },
+        relations: { character: true, messages: true },
+        order: { messages: { timestamp: "ASC", id: "ASC" } },
       });
 
-      if (!conversation) {
-        return res.status(404).json({ error: "Conversación no encontrada" });
-      }
+      if (!conversation) return res.status(404).json({ error: "Conversación no encontrada" });
 
       const conversationWithAudioUrls = await this.withSignedUrlsForConversation(conversation);
       res.json(conversationWithAudioUrls);

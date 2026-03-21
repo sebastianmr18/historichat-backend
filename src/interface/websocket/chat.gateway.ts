@@ -1,12 +1,11 @@
 import { Server, Socket } from "socket.io";
-import { JwtPayload } from "jsonwebtoken";
 import { ChatFlowError, ChatService } from "../../application/services/chat.service.js";
-import { SupabaseTokenVerifier } from "../../infrastructure/auth/SupabaseTokenVerifier.js";
 import { logger } from "../../infrastructure/logging/logger.js";
+import { serializeError } from "../../shared/errors.js";
+import { generateTraceId } from "../../shared/trace.js";
+import { wsAuthMiddleware } from "./ws-auth.middleware.js";
 
 export class ChatGateway {
-  private verifier = new SupabaseTokenVerifier();
-
   constructor(
     private io: Server,
     private chatService: ChatService
@@ -16,7 +15,7 @@ export class ChatGateway {
 
   private buildTrace(socket: Socket, event: string, conversationId?: string) {
     return {
-      traceId: `ws_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+      traceId: generateTraceId("ws"),
       socketId: socket.id,
       event,
       conversationId,
@@ -25,20 +24,10 @@ export class ChatGateway {
   }
 
   private decodeAudioPayload(audioBase64: string) {
-    const normalized = audioBase64.includes(",") ? audioBase64.slice(audioBase64.indexOf(",") + 1) : audioBase64;
+    const normalized = audioBase64.includes(",")
+      ? audioBase64.slice(audioBase64.indexOf(",") + 1)
+      : audioBase64;
     return Buffer.from(normalized, "base64");
-  }
-
-  private toErrorPayload(error: unknown) {
-    if (error instanceof Error) {
-      return {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
-    }
-
-    return { message: String(error) };
   }
 
   private toClientError(error: unknown, fallbackMessage: string) {
@@ -68,67 +57,24 @@ export class ChatGateway {
     };
   }
 
-  private getUserId(decoded: string | JwtPayload): string | undefined {
-    if (typeof decoded === "string") {
-      return undefined;
-    }
-
-    if (typeof decoded.sub === "string") {
-      return decoded.sub;
-    }
-
-    if (typeof (decoded as JwtPayload & { id?: string }).id === "string") {
-      return (decoded as JwtPayload & { id?: string }).id;
-    }
-
-    return undefined;
+  private initialize() {
+    this.registerAuthMiddleware();
+    this.registerEventHandlers();
   }
 
-  private initialize() {
-    this.io.use(async (socket, next) => {
-      const authToken =
-        typeof socket.handshake.auth?.token === "string"
-          ? socket.handshake.auth.token
-          : undefined;
-      const headerAuthorization =
-        typeof socket.handshake.headers.authorization === "string"
-          ? socket.handshake.headers.authorization
-          : undefined;
-      const bearerToken = headerAuthorization?.startsWith("Bearer ")
-        ? headerAuthorization.slice(7)
-        : undefined;
+  private registerAuthMiddleware() {
+    this.io.use(wsAuthMiddleware);
+  }
 
-      const token = authToken ?? bearerToken;
-
-      if (!token) {
-        return next(new Error("unauthorized"));
-      }
-
-      try {
-        const decoded = await this.verifier.verifyToken(token);
-        const userId = this.getUserId(decoded);
-
-        if (!userId) {
-          return next(new Error("unauthorized"));
-        }
-
-        socket.data.userId = userId;
-        return next();
-      } catch {
-        return next(new Error("unauthorized"));
-      }
-    });
-
+  private registerEventHandlers() {
     this.io.on("connection", (socket: Socket) => {
       logger.info("[chat.gateway] client_connected", { socketId: socket.id });
 
-      // Suscribirse a una conversación (Reemplaza los grupos de Channels)
       socket.on("join_chat", (conversationId: string) => {
         socket.join(conversationId);
       });
 
-      // Manejo de Texto
-      socket.on("send_text", async (data: { conversationId: string, text: string }) => {
+      socket.on("send_text", async (data: { conversationId: string; text: string }) => {
         const userId = socket.data.userId as string;
         const trace = this.buildTrace(socket, "send_text", data.conversationId);
         logger.debug("[chat.gateway.send_text] received", {
@@ -138,64 +84,14 @@ export class ChatGateway {
         await this.handleTextFlow(socket, data.conversationId, userId, data.text, trace);
       });
 
-      // Manejo de Audio (STT -> Flow)
-      socket.on("send_audio", async (data: { conversationId: string, audioBase64: string, mimeType?: string }) => {
+      socket.on("send_audio", async (data: { conversationId: string; audioBase64: string; mimeType?: string }) => {
         const trace = this.buildTrace(socket, "send_audio", data.conversationId);
-        try {
-          const userId = socket.data.userId as string;
-          const audioBuffer = this.decodeAudioPayload(data.audioBase64);
-
-          logger.debug("[chat.gateway.send_audio] received", {
-            ...trace,
-            mimeType: data.mimeType ?? "audio/webm",
-            audioBase64Length: data.audioBase64?.length ?? 0,
-            audioBytes: audioBuffer.length,
-          });
-
-          const result = await this.chatService.processAudioMessage({
-            conversationId: data.conversationId,
-            userId,
-            audioBuffer,
-            mimeType: data.mimeType ?? "audio/webm",
-            trace,
-          });
-
-          logger.debug("[chat.gateway.send_audio] processed", {
-            ...trace,
-            transcriptionLength: result.transcription.length,
-            aiTextLength: result.text.length,
-            hasAudio: Boolean(result.audioBase64),
-            audioBase64Length: result.audioBase64?.length ?? 0,
-          });
-
-          socket.emit("transcription", { text: result.transcription });
-
-          this.io.to(data.conversationId).emit("ai_message", {
-            text: result.text,
-            audio: result.audioBase64,
-          });
-
-          if (result.warning) {
-            socket.emit("error", result.warning);
-          }
-        } catch (error: any) {
-          logger.error("[chat.gateway.send_audio] failed", {
-            ...trace,
-            error: this.toErrorPayload(error),
-          });
-
-          const clientError = this.toClientError(error, "Error procesando audio");
-
-          if (clientError.code === "NO_SPEECH") {
-            socket.emit("no_speech", { message: clientError.message });
-            return;
-          }
-
-          socket.emit("error", clientError);
-        }
+        await this.handleAudioFlow(socket, data, trace);
       });
 
-      socket.on("disconnect", () => logger.info("[chat.gateway] client_disconnected", { socketId: socket.id }));
+      socket.on("disconnect", () =>
+        logger.info("[chat.gateway] client_disconnected", { socketId: socket.id })
+      );
     });
   }
 
@@ -219,11 +115,10 @@ export class ChatGateway {
         hasAudio: Boolean(result.audioBase64),
         audioBase64Length: result.audioBase64?.length ?? 0,
       });
-      
-      // Emitir respuesta final a la sala de la conversación
+
       this.io.to(conversationId).emit("ai_message", {
         text: result.text,
-        audio: result.audioBase64
+        audio: result.audioBase64,
       });
 
       if (result.warning) {
@@ -236,10 +131,69 @@ export class ChatGateway {
         event: trace?.event,
         conversationId,
         userId,
-        error: this.toErrorPayload(error),
+        error: serializeError(error),
       });
 
       socket.emit("error", this.toClientError(error, "Error procesando mensaje"));
+    }
+  }
+
+  private async handleAudioFlow(
+    socket: Socket,
+    data: { conversationId: string; audioBase64: string; mimeType?: string },
+    trace: ReturnType<ChatGateway["buildTrace"]>
+  ) {
+    try {
+      const userId = socket.data.userId as string;
+      const audioBuffer = this.decodeAudioPayload(data.audioBase64);
+
+      logger.debug("[chat.gateway.send_audio] received", {
+        ...trace,
+        mimeType: data.mimeType ?? "audio/webm",
+        audioBase64Length: data.audioBase64?.length ?? 0,
+        audioBytes: audioBuffer.length,
+      });
+
+      const result = await this.chatService.processAudioMessage({
+        conversationId: data.conversationId,
+        userId,
+        audioBuffer,
+        mimeType: data.mimeType ?? "audio/webm",
+        trace,
+      });
+
+      logger.debug("[chat.gateway.send_audio] processed", {
+        ...trace,
+        transcriptionLength: result.transcription.length,
+        aiTextLength: result.text.length,
+        hasAudio: Boolean(result.audioBase64),
+        audioBase64Length: result.audioBase64?.length ?? 0,
+      });
+
+      socket.emit("transcription", { text: result.transcription });
+
+      this.io.to(data.conversationId).emit("ai_message", {
+        text: result.text,
+        audio: result.audioBase64,
+      });
+
+      if (result.warning) {
+        socket.emit("error", result.warning);
+      }
+    } catch (error: any) {
+      logger.error("[chat.gateway.send_audio] failed", {
+        ...trace,
+        error: serializeError(error),
+      });
+
+      const clientError = this.toClientError(error, "Error procesando audio");
+
+      if (clientError.code === "NO_SPEECH") {
+        socket.emit("no_speech", { message: clientError.message });
+        return;
+      }
+
+      socket.emit("error", clientError);
     }
   }
 }

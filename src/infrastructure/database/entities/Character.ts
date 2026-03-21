@@ -19,6 +19,9 @@ export class Character {
   @Column({ type: "text" })
   biography: string;
 
+  @Column({ type: "text", nullable: true })
+  description?: string;
+
   @Column({ type: "jsonb", name: "key_traits", default: [] })
   keyTraits: string[];
 
@@ -30,6 +33,33 @@ export class Character {
 
   @Column({ type: "varchar", length: 50, name: "voice_id", nullable: true })
   voiceId?: string;
+
+  @Column({ type: "text", name: "theme_color", nullable: true })
+  themeColor?: string;
+
+  @Column({ type: "text", name: "theme_color_light", nullable: true })
+  themeColorLight?: string;
+
+  @Column({ type: "text", name: "years", nullable: true })
+  years?: string;
+
+  @Column({ type: "text", name: "category", nullable: true })
+  category?: string;
+
+  @Column({ type: "text", name: "epoch", nullable: true })
+  epoch?: string;
+
+  @Column({ type: "text", name: "quote", nullable: true })
+  quote?: string;
+
+  @Column({ type: "text", name: "image_url", nullable: true })
+  imageUrl?: string;
+
+  @Column({ type: "varchar", length: 10, name: "badge", nullable: true })
+  badge?: "popular" | "new";
+
+  @Column({ type: "jsonb", name: "topics", default: [] })
+  topics: string[];
 
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
