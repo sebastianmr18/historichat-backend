@@ -12,6 +12,9 @@ import { ChromaRepository } from './infrastructure/vector/chroma.repository.js';
 import { ChatService } from './application/services/chat.service.js';
 import { ChatGateway } from './interface/websocket/chat.gateway.js';
 import { storageService } from './interface/storage/storage.service.js';
+import { GeminiLiveAdapter } from './infrastructure/ai/gemini-live.adapter.js';
+import { LiveCallService } from './application/services/live-call.service.js';
+import { LiveGateway } from './interface/websocket/live.gateway.js';
 
 const startServer = async () => {
   try {
@@ -37,6 +40,11 @@ const startServer = async () => {
 
     new ChatGateway(io, chatService);
     logger.info("ChatGateway inicializado");
+
+    const geminiLiveAdapter = new GeminiLiveAdapter();
+    const liveCallService = new LiveCallService(geminiLiveAdapter, chromaRepo);
+    new LiveGateway(io, liveCallService);
+    logger.info("LiveGateway inicializado (namespace /live)");
 
     const PORT = env.PORT || 8000;
     httpServer.listen(PORT, () => {

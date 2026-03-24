@@ -30,6 +30,7 @@ const envSchema = z.object({
   CHROMA_DATABASE: z.string().default('default_database'),
   CHROMA_HOST: z.string().optional(),
   DEBATE_TTS_ENABLED: z.coerce.boolean().default(true),
+  GEMINI_LIVE_MODEL: z.string().default('gemini-2.5-flash-native-audio-preview-12-2025'),
 });
 
 const _env = envSchema.safeParse(process.env);
