@@ -1,11 +1,77 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../../config/database.js";
+import { env } from "../../config/env.js";
 import { Character } from "../../infrastructure/database/entities/Character.js";
 import { logger } from "../../infrastructure/logging/logger.js";
 import { extractUserId } from "../../api/auth.middleware.js";
+import { storageService } from "../storage/storage.service.js";
 
 export class CharacterController {
   private characterRepo = AppDataSource.getRepository(Character);
+  private readonly imageBucket = "characters";
+
+  private getImagePathCandidates(imagePath: string): string[] {
+    const raw = imagePath.trim();
+    const withoutLeadingSlash = raw.replace(/^\/+/, "");
+    const withoutBucketPrefix = withoutLeadingSlash.startsWith(`${this.imageBucket}/`)
+      ? withoutLeadingSlash.slice(this.imageBucket.length + 1)
+      : withoutLeadingSlash;
+
+    return [...new Set([raw, withoutLeadingSlash, withoutBucketPrefix].filter(Boolean))];
+  }
+
+  private async withSignedImageUrl(character: Character) {
+    if (!character.imageUrl) {
+      return {
+        ...character,
+        imageUrl: null,
+      };
+    }
+
+    const pathCandidates = this.getImagePathCandidates(character.imageUrl);
+    const errors: string[] = [];
+
+    for (const pathCandidate of pathCandidates) {
+      try {
+        const imageUrl = await storageService.getSignedUrl(
+          this.imageBucket,
+          pathCandidate,
+          env.SIGNED_URL_EXPIRES_SECONDS
+        );
+
+        if (pathCandidate !== character.imageUrl) {
+          logger.warn("[character.withSignedImageUrl] signed_with_normalized_path", {
+            characterId: character.id,
+            originalImagePath: character.imageUrl,
+            normalizedImagePath: pathCandidate,
+          });
+        }
+
+        return {
+          ...character,
+          imageUrl,
+        };
+      } catch (error: any) {
+        errors.push(`${pathCandidate}: ${error?.message ?? "Unknown signing error"}`);
+      }
+    }
+
+    logger.warn("[character.withSignedImageUrl] signing_failed", {
+      characterId: character.id,
+      imagePath: character.imageUrl,
+      triedPathCandidates: pathCandidates,
+      errors,
+    });
+
+    return {
+      ...character,
+      imageUrl: null,
+    };
+  }
+
+  private withSignedImageUrls(characters: Character[]) {
+    return Promise.all(characters.map((character) => this.withSignedImageUrl(character)));
+  }
 
   async getAll(req: Request, res: Response) {
     try {
@@ -15,7 +81,8 @@ export class CharacterController {
           ? [{ isPublic: true }, { isPublic: false, userId }]
           : { isPublic: true },
       });
-      res.json(characters);
+      const charactersWithImageUrls = await this.withSignedImageUrls(characters);
+      res.json(charactersWithImageUrls);
     } catch (error: any) {
       logger.error("[character.getAll] failed", {
         message: error.message,
@@ -40,7 +107,8 @@ export class CharacterController {
         return res.status(404).json({ error: "Personaje no encontrado" });
       }
 
-      res.json(character);
+      const characterWithImageUrl = await this.withSignedImageUrl(character);
+      res.json(characterWithImageUrl);
     } catch (error: any) {
       logger.error("[character.getById] failed", {
         message: error.message,
@@ -145,7 +213,8 @@ export class CharacterController {
       });
 
       const savedCharacter = await this.characterRepo.save(character);
-      return res.status(201).json(savedCharacter);
+      const characterWithImageUrl = await this.withSignedImageUrl(savedCharacter);
+      return res.status(201).json(characterWithImageUrl);
     } catch (error: any) {
       logger.error("[character.create] failed", {
         message: error.message,
