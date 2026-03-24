@@ -20,57 +20,63 @@ export class CharacterController {
     return [...new Set([raw, withoutLeadingSlash, withoutBucketPrefix].filter(Boolean))];
   }
 
-  private async withSignedImageUrl(character: Character) {
-    if (!character.imageUrl) {
-      return {
-        ...character,
-        imageUrl: null,
-      };
+  private async signImagePath(character: Character, field: "imageUrl" | "backgroundImageUrl") {
+    const imagePath = character[field];
+
+    if (!imagePath) {
+      return null;
     }
 
-    const pathCandidates = this.getImagePathCandidates(character.imageUrl);
+    const pathCandidates = this.getImagePathCandidates(imagePath);
     const errors: string[] = [];
 
     for (const pathCandidate of pathCandidates) {
       try {
-        const imageUrl = await storageService.getSignedUrl(
+        const signedUrl = await storageService.getSignedUrl(
           this.imageBucket,
           pathCandidate,
           env.SIGNED_URL_EXPIRES_SECONDS
         );
 
-        if (pathCandidate !== character.imageUrl) {
-          logger.warn("[character.withSignedImageUrl] signed_with_normalized_path", {
+        if (pathCandidate !== imagePath) {
+          logger.warn("[character.signImagePath] signed_with_normalized_path", {
             characterId: character.id,
-            originalImagePath: character.imageUrl,
+            field,
+            originalImagePath: imagePath,
             normalizedImagePath: pathCandidate,
           });
         }
 
-        return {
-          ...character,
-          imageUrl,
-        };
+        return signedUrl;
       } catch (error: any) {
         errors.push(`${pathCandidate}: ${error?.message ?? "Unknown signing error"}`);
       }
     }
 
-    logger.warn("[character.withSignedImageUrl] signing_failed", {
+    logger.warn("[character.signImagePath] signing_failed", {
       characterId: character.id,
-      imagePath: character.imageUrl,
+      field,
+      imagePath,
       triedPathCandidates: pathCandidates,
       errors,
     });
 
+    return null;
+  }
+
+  private async withSignedImageUrlsForCharacter(character: Character) {
+    const imageUrl = await this.signImagePath(character, "imageUrl");
+    const backgroundImageUrl = await this.signImagePath(character, "backgroundImageUrl");
+
     return {
       ...character,
-      imageUrl: null,
+      imageUrl,
+      backgroundImageUrl,
     };
   }
 
   private withSignedImageUrls(characters: Character[]) {
-    return Promise.all(characters.map((character) => this.withSignedImageUrl(character)));
+    return Promise.all(characters.map((character) => this.withSignedImageUrlsForCharacter(character)));
   }
 
   async getAll(req: Request, res: Response) {
@@ -107,7 +113,7 @@ export class CharacterController {
         return res.status(404).json({ error: "Personaje no encontrado" });
       }
 
-      const characterWithImageUrl = await this.withSignedImageUrl(character);
+      const characterWithImageUrl = await this.withSignedImageUrlsForCharacter(character);
       res.json(characterWithImageUrl);
     } catch (error: any) {
       logger.error("[character.getById] failed", {
@@ -161,6 +167,7 @@ export class CharacterController {
         epoch,
         quote,
         imageUrl,
+        backgroundImageUrl,
         badge,
         topics,
         isPublic,
@@ -206,6 +213,7 @@ export class CharacterController {
         epoch: typeof epoch === "string" ? epoch : undefined,
         quote: typeof quote === "string" ? quote : undefined,
         imageUrl: typeof imageUrl === "string" ? imageUrl : undefined,
+        backgroundImageUrl: typeof backgroundImageUrl === "string" ? backgroundImageUrl : undefined,
         badge: badge === "popular" || badge === "new" ? badge : undefined,
         topics: Array.isArray(topics) ? topics : [],
         isPublic: typeof isPublic === "boolean" ? isPublic : false,
@@ -213,7 +221,7 @@ export class CharacterController {
       });
 
       const savedCharacter = await this.characterRepo.save(character);
-      const characterWithImageUrl = await this.withSignedImageUrl(savedCharacter);
+      const characterWithImageUrl = await this.withSignedImageUrlsForCharacter(savedCharacter);
       return res.status(201).json(characterWithImageUrl);
     } catch (error: any) {
       logger.error("[character.create] failed", {

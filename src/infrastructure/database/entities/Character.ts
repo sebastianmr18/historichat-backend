@@ -55,6 +55,9 @@ export class Character {
   @Column({ type: "text", name: "image_url", nullable: true })
   imageUrl?: string;
 
+  @Column({ type: "text", name: "background_image_url", nullable: true })
+  backgroundImageUrl?: string;
+
   @Column({ type: "varchar", length: 10, name: "badge", nullable: true })
   badge?: "popular" | "new";
 
