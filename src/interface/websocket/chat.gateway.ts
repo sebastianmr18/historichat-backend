@@ -1,8 +1,9 @@
 import { Server, Socket } from "socket.io";
-import { ChatFlowError, ChatService } from "../../application/services/chat.service.js";
+import { ChatService } from "../../application/services/chat.service.js";
 import { logger } from "../../infrastructure/logging/logger.js";
 import { serializeError } from "../../shared/errors.js";
 import { generateTraceId } from "../../shared/trace.js";
+import { toClientError } from "../../shared/ws-errors.js";
 import { wsAuthMiddleware } from "./ws-auth.middleware.js";
 
 export class ChatGateway {
@@ -30,31 +31,14 @@ export class ChatGateway {
     return Buffer.from(normalized, "base64");
   }
 
-  private toClientError(error: unknown, fallbackMessage: string) {
-    if (error instanceof ChatFlowError) {
-      return {
-        message: error.message,
-        code: error.code,
-        stage: error.stage,
-        retryable: error.retryable,
-      };
-    }
-
-    if (error instanceof Error) {
-      return {
-        message: error.message || fallbackMessage,
-        code: "UNEXPECTED_ERROR",
-        stage: "unknown",
-        retryable: true,
-      };
-    }
-
-    return {
-      message: fallbackMessage,
-      code: "UNEXPECTED_ERROR",
-      stage: "unknown",
-      retryable: true,
-    };
+  private emitAiMessage(conversationId: string, result: { text: string; audioBase64?: string; messageId?: number; speakerId?: string; speakerName?: string }) {
+    this.io.to(conversationId).emit("ai_message", {
+      text: result.text,
+      audio: result.audioBase64,
+      message_id: result.messageId,
+      speaker_id: result.speakerId,
+      speaker_name: result.speakerName,
+    });
   }
 
   private initialize() {
@@ -74,6 +58,15 @@ export class ChatGateway {
         socket.join(conversationId);
       });
 
+      socket.on("join_debate", (conversationId: string) => {
+        const trace = this.buildTrace(socket, "join_debate", conversationId);
+        socket.join(conversationId);
+        socket.emit("debate_started", {
+          conversationId,
+          traceId: trace.traceId,
+        });
+      });
+
       socket.on("send_text", async (data: { conversationId: string; text: string }) => {
         const userId = socket.data.userId as string;
         const trace = this.buildTrace(socket, "send_text", data.conversationId);
@@ -87,6 +80,16 @@ export class ChatGateway {
       socket.on("send_audio", async (data: { conversationId: string; audioBase64: string; mimeType?: string }) => {
         const trace = this.buildTrace(socket, "send_audio", data.conversationId);
         await this.handleAudioFlow(socket, data, trace);
+      });
+
+      socket.on("send_debate_text", async (data: { conversationId: string; text: string }) => {
+        const userId = socket.data.userId as string;
+        const trace = this.buildTrace(socket, "send_debate_text", data.conversationId);
+        logger.debug("[chat.gateway.send_debate_text] received", {
+          ...trace,
+          textLength: data.text?.length ?? 0,
+        });
+        await this.handleDebateTextFlow(socket, data.conversationId, userId, data.text, trace);
       });
 
       socket.on("disconnect", () =>
@@ -116,10 +119,7 @@ export class ChatGateway {
         audioBase64Length: result.audioBase64?.length ?? 0,
       });
 
-      this.io.to(conversationId).emit("ai_message", {
-        text: result.text,
-        audio: result.audioBase64,
-      });
+      this.emitAiMessage(conversationId, result);
 
       if (result.warning) {
         socket.emit("error", result.warning);
@@ -134,7 +134,7 @@ export class ChatGateway {
         error: serializeError(error),
       });
 
-      socket.emit("error", this.toClientError(error, "Error procesando mensaje"));
+      socket.emit("error", toClientError(error, "Error procesando mensaje"));
     }
   }
 
@@ -172,10 +172,7 @@ export class ChatGateway {
 
       socket.emit("transcription", { text: result.transcription });
 
-      this.io.to(data.conversationId).emit("ai_message", {
-        text: result.text,
-        audio: result.audioBase64,
-      });
+      this.emitAiMessage(data.conversationId, result);
 
       if (result.warning) {
         socket.emit("error", result.warning);
@@ -186,7 +183,7 @@ export class ChatGateway {
         error: serializeError(error),
       });
 
-      const clientError = this.toClientError(error, "Error procesando audio");
+      const clientError = toClientError(error, "Error procesando audio");
 
       if (clientError.code === "NO_SPEECH") {
         socket.emit("no_speech", { message: clientError.message });
@@ -194,6 +191,51 @@ export class ChatGateway {
       }
 
       socket.emit("error", clientError);
+    }
+  }
+
+  private async handleDebateTextFlow(
+    socket: Socket,
+    conversationId: string,
+    userId: string,
+    text: string,
+    trace: ReturnType<ChatGateway["buildTrace"]>
+  ) {
+    try {
+      const result = await this.chatService.processDebateMessage(conversationId, userId, text, trace);
+
+      logger.debug("[chat.gateway.send_debate_text] processed", {
+        ...trace,
+        userMessageId: result.userMessageId,
+        responseCount: result.responses.length,
+      });
+
+      this.io.to(conversationId).emit("debate_turn_result", {
+        conversationId,
+        traceId: trace.traceId,
+        user_message_id: result.userMessageId,
+        user_text: result.userText,
+        responses: result.responses.map((response) => ({
+          message_id: response.messageId,
+          text: response.text,
+          speaker_id: response.speakerId,
+          speaker_name: response.speakerName,
+          audio: response.audioBase64,
+          warning: response.warning,
+        })),
+      });
+    } catch (error) {
+      logger.error("[chat.gateway.send_debate_text] failed", {
+        ...trace,
+        conversationId,
+        userId,
+        error: serializeError(error),
+      });
+
+      socket.emit("debate_error", {
+        traceId: trace.traceId,
+        ...toClientError(error, "Error procesando turno de debate"),
+      });
     }
   }
 }

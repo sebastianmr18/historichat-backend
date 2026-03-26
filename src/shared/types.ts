@@ -28,6 +28,9 @@ export interface ProcessAudioMessageInput {
 
 export interface ChatResponse {
   text: string;
+  messageId?: number;
+  speakerId?: string;
+  speakerName?: string;
   audioBase64?: string;
   warning?: {
     code: string;
@@ -35,4 +38,19 @@ export interface ChatResponse {
     stage: string;
     retryable: boolean;
   };
+}
+
+export interface DebateTurnCharacterResult {
+  messageId: number;
+  text: string;
+  speakerId: string;
+  speakerName: string;
+  audioBase64?: string;
+  warning?: ChatResponse["warning"];
+}
+
+export interface DebateTurnResult {
+  userMessageId: number;
+  userText: string;
+  responses: DebateTurnCharacterResult[];
 }

@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    name: Install and Build
+    name: Install, Test and Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -31,6 +31,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run tests
+        run: npm test
 
       - name: Build TypeScript
         run: npm run build

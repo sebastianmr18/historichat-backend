@@ -1,8 +1,17 @@
-import { AppDataSource } from "../../config/database.js";
+import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
 import { GeminiService } from "../../infrastructure/ai/gemini.service.js";
-import { ChatResponse, IStorageService, ITextToSpeech, ISpeechToText, ProcessAudioMessageInput, RequestTraceContext } from "../../shared/types.js";
+import {
+  ChatResponse,
+  DebateTurnCharacterResult,
+  DebateTurnResult,
+  IStorageService,
+  ITextToSpeech,
+  ISpeechToText,
+  ProcessAudioMessageInput,
+  RequestTraceContext,
+} from "../../shared/types.js";
 import { ChromaRepository } from "../../infrastructure/vector/chroma.repository.js";
 import { env } from "../../config/env.js";
 import { logger } from "../../infrastructure/logging/logger.js";
@@ -12,17 +21,17 @@ import { getEncodingFromMimeType, getFileExtensionFromMimeType } from "../../sha
 import { buildSystemPrompt } from "../prompts/character-prompt.js";
 import type { ChatFlowErrorCode } from "../../domain/errors/chat-flow.error.js";
 import { ChatFlowError } from "../../domain/errors/chat-flow.error.js";
-export { ChatFlowError, ChatFlowErrorCode };
+import type { IRepository, IDataSource } from "../../domain/repositories/repository.interfaces.js";
 
 export class ChatService {
-  private conversationRepo = AppDataSource.getRepository(Conversation);
-  private messageRepo = AppDataSource.getRepository(Message);
-
   constructor(
     private gemini: GeminiService,
     private voice: ITextToSpeech & ISpeechToText,
     private vectorStore: ChromaRepository,
     private storageService: IStorageService,
+    private conversationRepo: IRepository<Conversation>,
+    private messageRepo: IRepository<Message>,
+    private dataSource: IDataSource,
     private readonly storageBucket: string = env.SUPABASE_STORAGE_BUCKET
   ) {}
 
@@ -37,7 +46,10 @@ export class ChatService {
   private async getConversation(conversationId: string, userId: string) {
     const conversation = await this.conversationRepo.findOne({
       where: { id: conversationId, userId },
-      relations: ["character"],
+      relations: {
+        character: true,
+        secondaryCharacter: true,
+      },
     });
 
     if (!conversation) {
@@ -50,6 +62,14 @@ export class ChatService {
     }
 
     return conversation;
+  }
+
+  private async loadConversationHistory(conversationId: string, take = 6) {
+    return this.messageRepo.find({
+      where: { conversationId },
+      order: { timestamp: "ASC", id: "ASC" },
+      take,
+    });
   }
 
   private async synthesizeAndUpload(
@@ -115,28 +135,27 @@ export class ChatService {
     }
   }
 
-  private async generateAiResponse(conversation: Conversation, userText: string) {
-    const conversationId = conversation.id;
-
-    const history = await this.messageRepo.find({
-      where: { conversationId },
-      order: { timestamp: "ASC", id: "ASC" },
-      take: 6,
-    });
+  private async generateAiResponse(params: {
+    conversationId: string;
+    character: Character;
+    userText: string;
+    history?: Array<Pick<Message, "role" | "content">>;
+  }) {
+    const history = params.history ?? (await this.loadConversationHistory(params.conversationId));
 
     const context = await this.vectorStore.getContext(
-      userText,
-      conversation.character.vectorDbName || "default"
+      params.userText,
+      params.character.vectorDbName || "default"
     );
 
-    const systemPrompt = buildSystemPrompt(conversation.character);
+    const systemPrompt = buildSystemPrompt(params.character);
 
     logger.debug("[chat.generateAiResponse] context_ready", {
-      conversationId,
-      characterId: conversation.character.id,
-      characterName: conversation.character.name,
+      conversationId: params.conversationId,
+      characterId: params.character.id,
+      characterName: params.character.name,
       historyCount: history.length,
-      userTextLength: userText.length,
+      userTextLength: params.userText.length,
       contextLength: context?.length ?? 0,
       systemPromptLength: systemPrompt.length,
     });
@@ -146,7 +165,7 @@ export class ChatService {
     const aiResponseText = await this.gemini.generateResponse(
       systemPrompt,
       history as any,
-      userText,
+      params.userText,
       context
     );
 
@@ -181,7 +200,11 @@ export class ChatService {
     let aiResponseText: string;
 
     try {
-      aiResponseText = await this.generateAiResponse(conversation, userText);
+      aiResponseText = await this.generateAiResponse({
+        conversationId,
+        character: conversation.character,
+        userText,
+      });
     } catch (error) {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta");
     }
@@ -191,9 +214,14 @@ export class ChatService {
       aiResponseLength: aiResponseText.length,
     });
 
-    const savedAssistantMessage = await AppDataSource.transaction(async (manager) => {
+    const savedAssistantMessage = await this.dataSource.transaction(async (manager) => {
       await manager.save(Message, { conversationId, role: "user", content: userText });
-      return manager.save(Message, { conversationId, role: "assistant", content: aiResponseText });
+      return manager.save(Message, {
+        conversationId,
+        role: "assistant",
+        content: aiResponseText,
+        speakerCharacterId: conversation.character.id,
+      });
     });
 
     logger.debug("[chat.processTextMessage] messages_saved", {
@@ -210,7 +238,13 @@ export class ChatService {
       traceCtx
     );
 
-    return { text: aiResponseText, ...audioResult };
+    return {
+      text: aiResponseText,
+      messageId: savedAssistantMessage.id,
+      speakerId: conversation.character.id,
+      speakerName: conversation.character.name,
+      ...audioResult,
+    };
   }
 
   async processAudioMessage(input: ProcessAudioMessageInput): Promise<{ transcription: string } & ChatResponse> {
@@ -309,12 +343,16 @@ export class ChatService {
     let aiResponseText: string;
 
     try {
-      aiResponseText = await this.generateAiResponse(conversation, transcription);
+      aiResponseText = await this.generateAiResponse({
+        conversationId: input.conversationId,
+        character: conversation.character,
+        userText: transcription,
+      });
     } catch (error) {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta");
     }
 
-    const { savedAssistantMessage } = await AppDataSource.transaction(async (manager) => {
+    const { savedAssistantMessage } = await this.dataSource.transaction(async (manager) => {
       await manager.save(Message, {
         conversationId: input.conversationId,
         role: "user",
@@ -328,6 +366,7 @@ export class ChatService {
         conversationId: input.conversationId,
         role: "assistant",
         content: aiResponseText,
+        speakerCharacterId: conversation.character.id,
       });
 
       return { savedAssistantMessage: assistantMessage };
@@ -348,6 +387,166 @@ export class ChatService {
       traceCtx
     );
 
-    return { transcription, text: aiResponseText, ...audioResult };
+    return {
+      transcription,
+      text: aiResponseText,
+      messageId: savedAssistantMessage.id,
+      speakerId: conversation.character.id,
+      speakerName: conversation.character.name,
+      ...audioResult,
+    };
+  }
+
+  async processDebateMessage(
+    conversationId: string,
+    userId: string,
+    userText: string,
+    trace?: RequestTraceContext
+  ): Promise<DebateTurnResult> {
+    const traceCtx = createTraceContext(trace, {
+      conversationId,
+      userId,
+      phase: "process_debate_message",
+    });
+
+    logger.debug("[chat.processDebateMessage] started", {
+      ...traceCtx,
+      userTextLength: userText.length,
+    });
+
+    const conversation = await this.getConversation(conversationId, userId);
+
+    if (!conversation.secondaryCharacterId || !conversation.secondaryCharacter) {
+      throw new ChatFlowError(
+        "DEBATE_NOT_AVAILABLE",
+        "La conversación no está configurada en modo debate",
+        "validation",
+        false
+      );
+    }
+
+    const speakerA = conversation.character;
+    const speakerB = conversation.secondaryCharacter;
+    const baseHistory = await this.loadConversationHistory(conversationId);
+
+    let responseA: string;
+    let responseB: string;
+
+    try {
+      responseA = await this.generateAiResponse({
+        conversationId,
+        character: speakerA,
+        userText,
+        history: baseHistory,
+      });
+    } catch (error) {
+      throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta del personaje A");
+    }
+
+    const historyForSpeakerB: Array<Pick<Message, "role" | "content">> = [
+      ...baseHistory,
+      { role: "assistant", content: responseA },
+    ];
+
+    try {
+      responseB = await this.generateAiResponse({
+        conversationId,
+        character: speakerB,
+        userText,
+        history: historyForSpeakerB,
+      });
+    } catch (error) {
+      throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta del personaje B");
+    }
+
+    const persisted = await this.dataSource.transaction(async (manager) => {
+      const userMessage = await manager.save(Message, {
+        conversationId,
+        role: "user",
+        content: userText,
+      });
+
+      const speakerAMessage = await manager.save(Message, {
+        conversationId,
+        role: "assistant",
+        content: responseA,
+        speakerCharacterId: speakerA.id,
+      });
+
+      const speakerBMessage = await manager.save(Message, {
+        conversationId,
+        role: "assistant",
+        content: responseB,
+        speakerCharacterId: speakerB.id,
+      });
+
+      return {
+        userMessage,
+        speakerAMessage,
+        speakerBMessage,
+      };
+    });
+
+    const responses: DebateTurnCharacterResult[] = [
+      {
+        messageId: persisted.speakerAMessage.id,
+        text: responseA,
+        speakerId: speakerA.id,
+        speakerName: speakerA.name,
+      },
+      {
+        messageId: persisted.speakerBMessage.id,
+        text: responseB,
+        speakerId: speakerB.id,
+        speakerName: speakerB.name,
+      },
+    ];
+
+    if (env.DEBATE_TTS_ENABLED) {
+      const [audioA, audioB] = await Promise.all([
+        this.synthesizeAndUpload(
+          responseA,
+          speakerA.voiceId,
+          persisted.speakerAMessage.id,
+          userId,
+          conversationId,
+          { ...traceCtx, speaker: "A", speakerId: speakerA.id }
+        ),
+        this.synthesizeAndUpload(
+          responseB,
+          speakerB.voiceId,
+          persisted.speakerBMessage.id,
+          userId,
+          conversationId,
+          { ...traceCtx, speaker: "B", speakerId: speakerB.id }
+        ),
+      ]);
+
+      if ("audioBase64" in audioA) {
+        responses[0].audioBase64 = audioA.audioBase64;
+      } else {
+        responses[0].warning = audioA.warning;
+      }
+
+      if ("audioBase64" in audioB) {
+        responses[1].audioBase64 = audioB.audioBase64;
+      } else {
+        responses[1].warning = audioB.warning;
+      }
+    }
+
+    logger.debug("[chat.processDebateMessage] completed", {
+      ...traceCtx,
+      userMessageId: persisted.userMessage.id,
+      responseCount: responses.length,
+      speakerAId: speakerA.id,
+      speakerBId: speakerB.id,
+    });
+
+    return {
+      userMessageId: persisted.userMessage.id,
+      userText,
+      responses,
+    };
   }
 }

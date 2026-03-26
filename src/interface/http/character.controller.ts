@@ -1,11 +1,23 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../../config/database.js";
+import { env } from "../../config/env.js";
 import { Character } from "../../infrastructure/database/entities/Character.js";
 import { logger } from "../../infrastructure/logging/logger.js";
 import { extractUserId } from "../../api/auth.middleware.js";
+import { serializeError } from "../../shared/errors.js";
+import { IStorageService } from "../../shared/types.js";
+import { createCharacterSchema } from "./schemas/character.schema.js";
+import { withSignedImageUrls, withSignedImageUrlsBatch } from "./presenters/character.presenter.js";
 
 export class CharacterController {
   private characterRepo = AppDataSource.getRepository(Character);
+
+  constructor(private readonly storage: IStorageService) {}
+
+  private handleError(res: Response, context: string, error: unknown) {
+    logger.error(`[character.${context}] failed`, serializeError(error));
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 
   async getAll(req: Request, res: Response) {
     try {
@@ -15,14 +27,10 @@ export class CharacterController {
           ? [{ isPublic: true }, { isPublic: false, userId }]
           : { isPublic: true },
       });
-      res.json(characters);
-    } catch (error: any) {
-      logger.error("[character.getAll] failed", {
-        message: error.message,
-        stack: error.stack,
-        query: error.query,
-      });
-      res.status(500).json({ error: "Internal Server Error" });
+      const result = await withSignedImageUrlsBatch(this.storage, characters, env.SIGNED_URL_EXPIRES_SECONDS);
+      res.json(result);
+    } catch (error) {
+      this.handleError(res, "getAll", error);
     }
   }
 
@@ -40,14 +48,10 @@ export class CharacterController {
         return res.status(404).json({ error: "Personaje no encontrado" });
       }
 
-      res.json(character);
-    } catch (error: any) {
-      logger.error("[character.getById] failed", {
-        message: error.message,
-        stack: error.stack,
-        query: error.query,
-      });
-      res.status(500).json({ error: "Internal Server Error" });
+      const result = await withSignedImageUrls(this.storage, character, env.SIGNED_URL_EXPIRES_SECONDS);
+      res.json(result);
+    } catch (error) {
+      this.handleError(res, "getById", error);
     }
   }
 
@@ -55,7 +59,15 @@ export class CharacterController {
     try {
       const { id } = req.params;
       const { voiceId } = req.body;
-      const character = await this.characterRepo.findOne({ where: { id: id as any } });
+      const userId = extractUserId(req);
+
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const character = await this.characterRepo.findOne({
+        where: { id: id as any, userId },
+      });
 
       if (!character) {
         return res.status(404).json({ error: "Personaje no encontrado" });
@@ -64,8 +76,8 @@ export class CharacterController {
       character.voiceId = voiceId;
       await this.characterRepo.save(character);
       res.json(character);
-    } catch (error: any) {
-      res.status(500).json({ error: "Internal Server Error", details: error.message });
+    } catch (error) {
+      this.handleError(res, "updateVoiceId", error);
     }
   }
 
@@ -77,82 +89,23 @@ export class CharacterController {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const {
-        name,
-        role,
-        biography,
-        description,
-        keyTraits,
-        speechTics,
-        vectorDbName,
-        voiceId,
-        themeColor,
-        themeColorLight,
-        years,
-        category,
-        epoch,
-        quote,
-        imageUrl,
-        badge,
-        topics,
-        isPublic,
-      } = req.body ?? {};
+      const parsed = createCharacterSchema.safeParse(req.body ?? {});
 
-      if (typeof name !== "string" || !name.trim()) {
-        return res.status(400).json({ error: "El campo 'name' es obligatorio" });
-      }
-
-      if (typeof role !== "string" || !role.trim()) {
-        return res.status(400).json({ error: "El campo 'role' es obligatorio" });
-      }
-
-      if (typeof biography !== "string" || !biography.trim()) {
-        return res.status(400).json({ error: "El campo 'biography' es obligatorio" });
-      }
-
-      if (badge !== undefined && badge !== null && badge !== "popular" && badge !== "new") {
-        return res.status(400).json({ error: "El campo 'badge' debe ser 'popular' o 'new'" });
-      }
-
-      if (
-        topics !== undefined &&
-        topics !== null &&
-        (!Array.isArray(topics) || topics.some((topic) => typeof topic !== "string"))
-      ) {
-        return res.status(400).json({ error: "El campo 'topics' debe ser un arreglo de strings" });
+      if (!parsed.success) {
+        const firstError = parsed.error.issues[0];
+        return res.status(400).json({ error: firstError.message });
       }
 
       const character = this.characterRepo.create({
-        name: name.trim(),
-        role: role.trim(),
-        biography: biography.trim(),
-        description: typeof description === "string" ? description.trim() : undefined,
-        keyTraits: Array.isArray(keyTraits) ? keyTraits : [],
-        speechTics: Array.isArray(speechTics) ? speechTics : [],
-        vectorDbName: typeof vectorDbName === "string" ? vectorDbName : "",
-        voiceId: typeof voiceId === "string" ? voiceId : undefined,
-        themeColor: typeof themeColor === "string" ? themeColor : undefined,
-        themeColorLight: typeof themeColorLight === "string" ? themeColorLight : undefined,
-        years: typeof years === "string" ? years : undefined,
-        category: typeof category === "string" ? category : undefined,
-        epoch: typeof epoch === "string" ? epoch : undefined,
-        quote: typeof quote === "string" ? quote : undefined,
-        imageUrl: typeof imageUrl === "string" ? imageUrl : undefined,
-        badge: badge === "popular" || badge === "new" ? badge : undefined,
-        topics: Array.isArray(topics) ? topics : [],
-        isPublic: typeof isPublic === "boolean" ? isPublic : false,
+        ...parsed.data,
         userId,
       });
 
       const savedCharacter = await this.characterRepo.save(character);
-      return res.status(201).json(savedCharacter);
-    } catch (error: any) {
-      logger.error("[character.create] failed", {
-        message: error.message,
-        stack: error.stack,
-        query: error.query,
-      });
-      return res.status(500).json({ error: "Internal Server Error" });
+      const result = await withSignedImageUrls(this.storage, savedCharacter, env.SIGNED_URL_EXPIRES_SECONDS);
+      return res.status(201).json(result);
+    } catch (error) {
+      this.handleError(res, "create", error);
     }
   }
 }

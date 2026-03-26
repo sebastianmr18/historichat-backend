@@ -13,3 +13,5 @@ gcp-credentials.json
 /.github/agents
 
 *.md
+
+/coverage
