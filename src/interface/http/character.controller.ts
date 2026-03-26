@@ -92,7 +92,7 @@ export class CharacterController {
       const parsed = createCharacterSchema.safeParse(req.body ?? {});
 
       if (!parsed.success) {
-        const firstError = parsed.error.errors[0];
+        const firstError = parsed.error.issues[0];
         return res.status(400).json({ error: firstError.message });
       }
 

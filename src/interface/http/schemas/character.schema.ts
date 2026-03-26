@@ -2,15 +2,15 @@ import { z } from "zod";
 
 export const createCharacterSchema = z.object({
   name: z
-    .string({ required_error: "El campo 'name' es obligatorio" })
+    .string({ error: "El campo 'name' es obligatorio" })
     .min(1, "El campo 'name' es obligatorio")
     .transform((v) => v.trim()),
   role: z
-    .string({ required_error: "El campo 'role' es obligatorio" })
+    .string({ error: "El campo 'role' es obligatorio" })
     .min(1, "El campo 'role' es obligatorio")
     .transform((v) => v.trim()),
   biography: z
-    .string({ required_error: "El campo 'biography' es obligatorio" })
+    .string({ error: "El campo 'biography' es obligatorio" })
     .min(1, "El campo 'biography' es obligatorio")
     .transform((v) => v.trim()),
   description: z.string().trim().optional(),
