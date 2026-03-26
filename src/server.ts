@@ -4,6 +4,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import app from './app.js';
 import { env } from './config/env.js';
 import { AppDataSource } from './config/database.js';
+import { logger } from './infrastructure/logging/logger.js';
 
 import { GeminiService } from './infrastructure/ai/gemini.service.js';
 import { GoogleCloudVoiceAdapter } from './infrastructure/ai/google-cloud-voice.adapter.js';
@@ -11,26 +12,31 @@ import { ChromaRepository } from './infrastructure/vector/chroma.repository.js';
 import { ChatService } from './application/services/chat.service.js';
 import { ChatGateway } from './interface/websocket/chat.gateway.js';
 import { storageService } from './interface/storage/storage.service.js';
-
-// Live Audio
-import { InMemorySessionRepository } from './infrastructure/database/InMemorySessionRepository.js';
-import { GeminiLiveClient } from './infrastructure/ai/GeminiLiveClient.js';
-import { HandleGeminiMessage } from './domain/agent/use-cases/HandleGeminiMessage.js';
-import { StartSession } from './domain/agent/use-cases/StartSession.js';
-import { HandleAudioInput } from './domain/agent/use-cases/HandleAudioInput.js';
-import { EndSession } from './domain/agent/use-cases/EndSession.js';
-import { LiveAudioGateway } from './interface/websocket/live-audio.gateway.js';
+import { GeminiLiveAdapter } from './infrastructure/ai/gemini-live.adapter.js';
+import { LiveCallService } from './application/services/live-call.service.js';
+import { LiveGateway } from './interface/websocket/live.gateway.js';
+import { Conversation } from './infrastructure/database/entities/Conversation.js';
+import { Message } from './infrastructure/database/entities/Message.js';
+import { Character } from './infrastructure/database/entities/Character.js';
 
 const startServer = async () => {
   try {
     await AppDataSource.initialize();
-    console.log("💾 Conexión a PostgreSQL (TypeORM) establecida.");
+    logger.info("Conexión a PostgreSQL (TypeORM) establecida");
 
     const geminiService = new GeminiService();
     const googleCloudVoiceAdapter = new GoogleCloudVoiceAdapter();
     const chromaRepo = new ChromaRepository();
 
-    const chatService = new ChatService(geminiService, googleCloudVoiceAdapter, chromaRepo, storageService);
+    const chatService = new ChatService(
+      geminiService,
+      googleCloudVoiceAdapter,
+      chromaRepo,
+      storageService,
+      AppDataSource.getRepository(Conversation),
+      AppDataSource.getRepository(Message),
+      AppDataSource,
+    );
 
     const httpServer = createServer(app);
     const io = new SocketIOServer(httpServer, {
@@ -44,39 +50,23 @@ const startServer = async () => {
     });
 
     new ChatGateway(io, chatService);
-    console.log("🛰️ ChatGateway inicializado.");
+    logger.info("ChatGateway inicializado");
 
-    // Live Audio
-    const sessionRepository = new InMemorySessionRepository();
-    const geminiLiveApiKey = env.GEMINI_API_KEY;
-    if (!geminiLiveApiKey) throw new Error("GEMINI_API_KEY no definida");
-
-    const handleGeminiMessage = new HandleGeminiMessage(sessionRepository, null as any);
-    const geminiLiveClient = new GeminiLiveClient(geminiLiveApiKey, handleGeminiMessage);
-
-    const startSession = new StartSession(sessionRepository, geminiLiveClient);
-    const handleAudioInput = new HandleAudioInput(sessionRepository, geminiLiveClient);
-    const endSession = new EndSession(sessionRepository, geminiLiveClient);
-
-    const liveAudioGateway = new LiveAudioGateway(io, startSession, handleAudioInput, endSession);
-    handleGeminiMessage.setNotifier(liveAudioGateway);
-
-    console.log("🛰️ LiveAudioGateway inicializado.");
+    const geminiLiveAdapter = new GeminiLiveAdapter();
+    const liveCallService = new LiveCallService(geminiLiveAdapter, chromaRepo, AppDataSource.getRepository(Character));
+    new LiveGateway(io, liveCallService);
+    logger.info("LiveGateway inicializado (namespace /live)");
 
     const PORT = env.PORT || 8000;
     httpServer.listen(PORT, () => {
-      console.log(`
-      🚀 SISTEMA ACTIVO
-      Puerto: ${PORT}
-      Modo: ${env.NODE_ENV}
-      `);
+      logger.info(`Servidor activo — puerto: ${PORT}, modo: ${env.NODE_ENV}`);
     });
 
     const shutdown = async () => {
-      console.log('\n🛑 Apagando servicios...');
+      logger.info("Apagando servicios...");
       await AppDataSource.destroy();
       httpServer.close(() => {
-        console.log('Servidor HTTP cerrado.');
+        logger.info("Servidor HTTP cerrado");
         process.exit(0);
       });
     };
@@ -84,7 +74,7 @@ const startServer = async () => {
     process.on('SIGINT', shutdown);
 
   } catch (error) {
-    console.error("❌ Fallo en el arranque:", error);
+    logger.error("Fallo en el arranque del servidor", { error });
     process.exit(1);
   }
 };

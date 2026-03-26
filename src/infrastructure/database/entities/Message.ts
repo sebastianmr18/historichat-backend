@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Relation } from "typeorm";
 import { Conversation } from "./Conversation.js";
+import { Character } from "./Character.js";
 
 @Entity("app_message")
 export class Message {
@@ -22,7 +23,14 @@ export class Message {
   @JoinColumn({ name: "conversation_id" })
   conversation: Relation<Conversation>;
 
-    @Column({ type: "text", name: "audio_path", nullable: true })
+  @ManyToOne(() => Character, { nullable: true })
+  @JoinColumn({ name: "speaker_character_id", foreignKeyConstraintName: "fk_app_message_speaker_character" })
+  speakerCharacter?: Relation<Character> | null;
+
+  @Column({ type: "uuid", name: "speaker_character_id", nullable: true })
+  speakerCharacterId?: string | null;
+
+  @Column({ type: "text", name: "audio_path", nullable: true })
   audioPath?: string | null;
 
   @Column({ type: "text", name: "audio_storage_id", nullable: true })

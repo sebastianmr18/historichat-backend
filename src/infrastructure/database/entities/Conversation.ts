@@ -17,6 +17,10 @@ export class Conversation {
   @JoinColumn({ name: "character_id", foreignKeyConstraintName: "app_conversation_character_id_b42f2e73_fk_app_character_id" })
   character: Relation<Character>;
 
+  @ManyToOne(() => Character, { nullable: true })
+  @JoinColumn({ name: "secondary_character_id", foreignKeyConstraintName: "fk_app_conversation_secondary_character" })
+  secondaryCharacter?: Relation<Character> | null;
+
   @OneToMany(() => Message, (message) => message.conversation)
   messages: Relation<Message[]>;
 
@@ -26,6 +30,9 @@ export class Conversation {
 
   @Column("uuid", { name: "user_id" })
   userId: string;
+
+  @Column("uuid", { name: "secondary_character_id", nullable: true })
+  secondaryCharacterId?: string | null;
 
   @BeforeInsert()
   assignDefaultsBeforeInsert() {

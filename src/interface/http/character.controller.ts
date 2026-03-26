@@ -1,73 +1,57 @@
 import { Request, Response } from "express";
-import { JwtPayload } from "jsonwebtoken";
 import { AppDataSource } from "../../config/database.js";
+import { env } from "../../config/env.js";
 import { Character } from "../../infrastructure/database/entities/Character.js";
-import { Message } from "../../infrastructure/database/entities/Message.js";
+import { logger } from "../../infrastructure/logging/logger.js";
+import { extractUserId } from "../../api/auth.middleware.js";
+import { serializeError } from "../../shared/errors.js";
+import { IStorageService } from "../../shared/types.js";
+import { createCharacterSchema } from "./schemas/character.schema.js";
+import { withSignedImageUrls, withSignedImageUrlsBatch } from "./presenters/character.presenter.js";
 
 export class CharacterController {
   private characterRepo = AppDataSource.getRepository(Character);
-  private messageRepo = AppDataSource.getRepository(Message);
 
-  private getUserId(req: Request): string | undefined {
-    if (!req.user) return undefined;
-    if (typeof req.user === "string") return req.user;
-    console.log(req.user);
+  constructor(private readonly storage: IStorageService) {}
 
-    const payload = req.user as JwtPayload & { id?: string };
-    return (typeof payload.sub === "string" ? payload.sub : undefined) ?? payload.id;
+  private handleError(res: Response, context: string, error: unknown) {
+    logger.error(`[character.${context}] failed`, serializeError(error));
+    res.status(500).json({ error: "Internal Server Error" });
   }
 
   async getAll(req: Request, res: Response) {
     try {
-      const characterRepo = AppDataSource.getRepository(Character);
-      const userId = this.getUserId(req);
-      const characters = await characterRepo.find({
+      const userId = extractUserId(req);
+      const characters = await this.characterRepo.find({
         where: userId
           ? [{ isPublic: true }, { isPublic: false, userId }]
           : { isPublic: true },
       });
-      res.json(characters);
-    } catch (error: any) {
-      console.error("❌ Error detallado en getAll:", {
-        message: error.message,
-        stack: error.stack,
-        query: error.query
-      });
-      
-      res.status(500).json({ 
-        error: "Internal Server Error", 
-        details: error.message 
-      });
+      const result = await withSignedImageUrlsBatch(this.storage, characters, env.SIGNED_URL_EXPIRES_SECONDS);
+      res.json(result);
+    } catch (error) {
+      this.handleError(res, "getAll", error);
     }
   }
 
   async getById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const characterRepo = AppDataSource.getRepository(Character);
-      const userId = this.getUserId(req);
-      const character = await characterRepo.findOne({
+      const userId = extractUserId(req);
+      const character = await this.characterRepo.findOne({
         where: userId
           ? [{ id: id as any, isPublic: true }, { id: id as any, isPublic: false, userId }]
           : { id: id as any, isPublic: true },
       });
-      
+
       if (!character) {
         return res.status(404).json({ error: "Personaje no encontrado" });
       }
-      
-      res.json(character);
-    } catch (error: any) {
-      console.error("❌ Error en getById:", {
-        message: error.message,
-        stack: error.stack,
-        query: error.query
-      });
-      
-      res.status(500).json({ 
-        error: "Internal Server Error", 
-        details: error.message 
-      });
+
+      const result = await withSignedImageUrls(this.storage, character, env.SIGNED_URL_EXPIRES_SECONDS);
+      res.json(result);
+    } catch (error) {
+      this.handleError(res, "getById", error);
     }
   }
 
@@ -75,92 +59,53 @@ export class CharacterController {
     try {
       const { id } = req.params;
       const { voiceId } = req.body;
-      const character = await this.characterRepo.findOne({ where: { id: id as any } });
-      
-      if (!character) {
-        return res.status(404).json({ error: "Personaje no encontrado" });
-      }
-      
-      character.voiceId = voiceId;
-      await this.characterRepo.save(character);
-      res.json(character);
-    } catch (error: any) {
-      res.status(500).json({ 
-        error: "Internal Server Error", 
-        details: error.message 
-      });
-    }
-  }
-
-  async create(req: Request, res: Response) {
-    try {
-      const userId = this.getUserId(req);
+      const userId = extractUserId(req);
 
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const {
-        name,
-        role,
-        biography,
-        keyTraits,
-        speechTics,
-        vectorDbName,
-        voiceId,
-        isPublic,
-      } = req.body ?? {};
+      const character = await this.characterRepo.findOne({
+        where: { id: id as any, userId },
+      });
 
-      if (typeof name !== "string" || !name.trim()) {
-        return res.status(400).json({ error: "El campo 'name' es obligatorio" });
+      if (!character) {
+        return res.status(404).json({ error: "Personaje no encontrado" });
       }
 
-      if (typeof role !== "string" || !role.trim()) {
-        return res.status(400).json({ error: "El campo 'role' es obligatorio" });
+      character.voiceId = voiceId;
+      await this.characterRepo.save(character);
+      res.json(character);
+    } catch (error) {
+      this.handleError(res, "updateVoiceId", error);
+    }
+  }
+
+  async create(req: Request, res: Response) {
+    try {
+      const userId = extractUserId(req);
+
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
       }
 
-      if (typeof biography !== "string" || !biography.trim()) {
-        return res.status(400).json({ error: "El campo 'biography' es obligatorio" });
+      const parsed = createCharacterSchema.safeParse(req.body ?? {});
+
+      if (!parsed.success) {
+        const firstError = parsed.error.issues[0];
+        return res.status(400).json({ error: firstError.message });
       }
 
       const character = this.characterRepo.create({
-        name: name.trim(),
-        role: role.trim(),
-        biography: biography.trim(),
-        keyTraits: Array.isArray(keyTraits) ? keyTraits : [],
-        speechTics: Array.isArray(speechTics) ? speechTics : [],
-        vectorDbName: typeof vectorDbName === "string" ? vectorDbName : "",
-        voiceId: typeof voiceId === "string" ? voiceId : undefined,
-        isPublic: typeof isPublic === "boolean" ? isPublic : false,
+        ...parsed.data,
         userId,
       });
 
       const savedCharacter = await this.characterRepo.save(character);
-      return res.status(201).json(savedCharacter);
-    } catch (error: any) {
-      console.error("❌ Error en create:", {
-        message: error.message,
-        stack: error.stack,
-        query: error.query,
-      });
-
-      return res.status(500).json({
-        error: "Internal Server Error",
-        details: error.message,
-      });
-    }
-  }
-
-  async getMessages(req: Request, res: Response) {
-    try {
-      console.log("Fetching messages for conversation ID:", req.params.id);
-      const messages = await this.messageRepo.find({
-        where: { conversationId: req.params.id as any },
-        order: { timestamp: "ASC" },
-      });
-      res.json(messages);
+      const result = await withSignedImageUrls(this.storage, savedCharacter, env.SIGNED_URL_EXPIRES_SECONDS);
+      return res.status(201).json(result);
     } catch (error) {
-      res.status(500).json({ error: "Internal Server Error" });
+      this.handleError(res, "create", error);
     }
   }
 }

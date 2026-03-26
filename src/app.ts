@@ -23,8 +23,6 @@ app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', uptime: process.uptime() });
 });
 
-console.log(apiRoutes)
-
 const protectedApiRouter = Router();
 protectedApiRouter.use(requireAuth);    
 

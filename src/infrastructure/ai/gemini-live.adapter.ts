@@ -1,83 +1,156 @@
-import { EventEmitter } from "events"
-import { GoogleGenAI, LiveCallbacks, Modality } from "@google/genai"
-import { GEMINI_CONFIG } from "../../config/gemini-live.config.js"
-import { logger } from "../logging/logger.js"
+import { GoogleGenAI, Modality, Type, Session, FunctionCall } from '@google/genai';
+import type { LiveServerMessage } from '@google/genai';
+import { env } from '../../config/env.js';
+import { logger } from '../logging/logger.js';
 
-export class GeminiLiveAdapter extends EventEmitter {
-  private client: any;
-  private session: any;
-  private isReady = false;
+export interface GeminiLiveCallbacks {
+  onReady: () => void;
+  onAudio: (base64Audio: string) => void;
+  onInputTranscription: (text: string) => void;
+  onOutputTranscription: (text: string) => void;
+  onTurnComplete: () => void;
+  onInterrupted: () => void;
+  onToolCall: (functionCalls: FunctionCall[]) => void;
+  onError: (error: Error) => void;
+  onClose: (reason: string) => void;
+}
 
-  constructor() {
-    super();
-    this.client = new GoogleGenAI({ apiKey: GEMINI_CONFIG.apiKey });
-  }
+export interface GeminiLiveConnectParams {
+  voiceName: string;
+  systemInstruction: string;
+  callbacks: GeminiLiveCallbacks;
+}
 
-  public async connect() {
-    if (this.session) return;
-
-    const callbacks: LiveCallbacks = {
-      onopen: () => {
-        this.emit("open");
-      },
-      onmessage: (msg) => {
-        this.emit("message", msg);
-      },
-      onerror: (err) => {
-        this.emit("error", err);
-      },
-      onclose: (ev) => {
-        this.emit("close", ev);
-      },
-    };
-
-    try {
-
-
-
-      this.session = await this.client.live.connect({
-        model: GEMINI_CONFIG.liveModel,
-        config: {
-          generationConfig: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: {
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } },
-            },
-          },
-          systemInstruction: {
-            parts: [
-              {
-                text: "Actúa como un asistente de voz de alta velocidad. Responde siempre con audio.",
-              },
-            ],
+const RAG_TOOL_DECLARATION = {
+  functionDeclarations: [
+    {
+      name: 'consultar_base_conocimientos',
+      description:
+        'Consulta la base de conocimientos del personaje para obtener informacion relevante',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          query: {
+            type: Type.STRING,
+            description: 'La pregunta o tema sobre el cual buscar informacion',
           },
         },
-        callbacks,
-        // map config fields to top-level to avoid deprecated generation_config usage
-        //temperature: (GEMINI_CONFIG as any).temperature,
-        //topP: (GEMINI_CONFIG as any).topP,
-        //topK: (GEMINI_CONFIG as any).topK,
-        //maxOutputTokens: (GEMINI_CONFIG as any).maxOutputTokens,
-        //speechConfig: GEMINI_CONFIG.speechConfig,
-        //systemInstruction: GEMINI_CONFIG.systemInstruction,
-      })
-      logger.info("connect() called on SDK")
-    } catch (err) {
-      logger.error("Failed to connect to Gemini", err)
-      this.emit("error", err)
+        required: ['query'],
+      },
+    },
+  ],
+};
+
+export class GeminiLiveAdapter {
+  private ai: GoogleGenAI;
+
+  constructor() {
+    this.ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+  }
+
+  async connect(params: GeminiLiveConnectParams): Promise<Session> {
+    const { voiceName, systemInstruction, callbacks } = params;
+
+    const session = await this.ai.live.connect({
+      model: env.GEMINI_LIVE_MODEL,
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName },
+          },
+        },
+        systemInstruction,
+        tools: [RAG_TOOL_DECLARATION],
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+      },
+      callbacks: {
+        onopen: () => {
+          logger.debug('[gemini-live.adapter] connection opened');
+          callbacks.onReady();
+        },
+        onmessage: (message: LiveServerMessage) => {
+          try {
+            this.routeMessage(message, callbacks);
+          } catch (error) {
+            logger.error('[gemini-live.adapter] onmessage handler error', { error });
+          }
+        },
+        onerror: (e: ErrorEvent) => {
+          logger.error('[gemini-live.adapter] connection error', { message: e?.message });
+          callbacks.onError(new Error(e?.message ?? 'Gemini Live connection error'));
+        },
+        onclose: (_e: CloseEvent) => {
+          logger.info('[gemini-live.adapter] connection closed');
+          callbacks.onClose('gemini_closed');
+        },
+      },
+    });
+
+    return session;
+  }
+
+  sendAudio(session: Session, base64Audio: string): void {
+    session.sendRealtimeInput({
+      media: {
+        data: base64Audio,
+        mimeType: 'audio/pcm;rate=16000',
+      },
+    });
+  }
+
+  sendToolResponse(
+    session: Session,
+    functionResponses: Array<{ id: string; name: string; response: Record<string, unknown> }>,
+  ): void {
+    session.sendToolResponse({ functionResponses });
+  }
+
+  closeSession(session: Session): void {
+    try {
+      session.close();
+    } catch (error) {
+      logger.warn('[gemini-live.adapter] closeSession error (ignored)', { error });
     }
   }
 
-  public async sendAudio(buffer: Buffer) {
-    if (!this.session) throw new Error("Session not ready");
-    // Forward binary Blob/Buffer directly as media (matching serverless)
-    await this.session.sendRealtimeInput({ media: buffer });
-  }
+  private routeMessage(message: LiveServerMessage, callbacks: GeminiLiveCallbacks): void {
+    const content = message.serverContent;
 
-  public async close() {
-    try {
-      this.session?.close();
-    } catch (e) {}
-    this.session = null;
+    // 1. Interruptions
+    if (content?.interrupted) {
+      callbacks.onInterrupted();
+      return;
+    }
+
+    // 2. Tool calls (RAG)
+    if (message.toolCall?.functionCalls?.length) {
+      callbacks.onToolCall(message.toolCall.functionCalls);
+      return;
+    }
+
+    // 3. Audio data — iterate all parts, not just parts[0]
+    const parts = content?.modelTurn?.parts;
+    if (parts?.length) {
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          callbacks.onAudio(part.inlineData.data);
+        }
+      }
+    }
+
+    // 4. Transcriptions
+    if (content?.inputTranscription?.text) {
+      callbacks.onInputTranscription(content.inputTranscription.text);
+    }
+    if (content?.outputTranscription?.text) {
+      callbacks.onOutputTranscription(content.outputTranscription.text);
+    }
+
+    // 5. Turn complete
+    if (content?.turnComplete) {
+      callbacks.onTurnComplete();
+    }
   }
 }

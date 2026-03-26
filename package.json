@@ -9,7 +9,10 @@
     "start": "node dist/server.js",
     "migration:generate": "typeorm-ts-node-esm migration:generate --dataSource src/config/database.ts",
     "migration:run": "typeorm-ts-node-esm migration:run --dataSource src/config/database.ts",
-    "migration:revert": "typeorm-ts-node-esm migration:revert --dataSource src/config/database.ts"
+    "migration:revert": "typeorm-ts-node-esm migration:revert --dataSource src/config/database.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
@@ -46,8 +49,10 @@
     "@types/node": "^25.3.0",
     "@types/uuid": "^9.0.7",
     "@types/ws": "^8.18.1",
+    "@vitest/coverage-v8": "^4.1.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.1"
   }
 }
