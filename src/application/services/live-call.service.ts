@@ -1,15 +1,14 @@
 import type { FunctionCall, Session } from '@google/genai';
-import { AppDataSource } from '../../config/database.js';
-import { LiveCallError } from '../../domain/errors/live-call.error.js';
 import type {
   LiveSessionState,
   LiveStartPayload,
   LiveSessionEmitter,
 } from '../../domain/live/live.types.js';
 import type { GeminiLiveAdapter, GeminiLiveCallbacks } from '../../infrastructure/ai/gemini-live.adapter.js';
-import { Character } from '../../infrastructure/database/entities/Character.js';
+import type { Character } from '../../infrastructure/database/entities/Character.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import type { ChromaRepository } from '../../infrastructure/vector/chroma.repository.js';
+import type { IRepository } from '../../domain/repositories/repository.interfaces.js';
 import { buildSystemPrompt } from '../prompts/character-prompt.js';
 
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -21,6 +20,7 @@ export class LiveCallService {
   constructor(
     private geminiLive: GeminiLiveAdapter,
     private vectorStore: ChromaRepository,
+    private characterRepo: IRepository<Character>,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -33,82 +33,18 @@ export class LiveCallService {
     payload: LiveStartPayload,
     emitter: LiveSessionEmitter,
   ): Promise<void> {
-    // Close any existing session for this socket
     if (this.sessions.has(socketId)) {
       this.cleanupSession(socketId);
     }
 
-    // Load character from DB
-    const characterRepo = AppDataSource.getRepository(Character);
-    const character = await characterRepo.findOne({ where: { id: payload.characterId } });
+    const character = await this.loadCharacter(payload.characterId, emitter);
+    if (!character) return;
 
-    if (!character) {
-      emitter.emitError({
-        code: 'CHARACTER_NOT_FOUND',
-        message: 'Personaje no encontrado',
-        retryable: false,
-      });
-      return;
-    }
-
-    const voiceName = character.voiceId || DEFAULT_VOICE;
-    const systemInstruction = payload.systemInstruction || buildSystemPrompt(character);
     const sessionId = `live_${socketId}_${Date.now()}`;
-
-    // Build session state (geminiSession filled after connect)
-    const now = Date.now();
-    const state: LiveSessionState = {
-      socketId,
-      userId,
-      characterId: payload.characterId,
-      characterVectorDbName: character.vectorDbName || '',
-      geminiSession: null,
-      startedAt: now,
-      lastActivityAt: now,
-      transcriptBuffer: { user: '', model: '' },
-      transcriptHistory: [],
-      inactivityTimer: null,
-    };
-
-    // Build Gemini callbacks
+    const state = this.buildSessionState(socketId, userId, payload, character);
     const callbacks = this.buildGeminiCallbacks(state, emitter, sessionId);
 
-    logger.info('[live-call.service] starting session', {
-      sessionId,
-      socketId,
-      userId,
-      characterId: payload.characterId,
-      voiceName,
-    });
-
-    try {
-      const session = await this.geminiLive.connect({
-        voiceName,
-        systemInstruction,
-        callbacks,
-      });
-
-      state.geminiSession = session;
-      this.sessions.set(socketId, state);
-      this.resetInactivityTimer(state, emitter);
-
-      emitter.emitReady({
-        sessionId,
-        voiceName,
-        characterName: character.name,
-      });
-    } catch (error) {
-      logger.error('[live-call.service] failed to connect to Gemini', {
-        sessionId,
-        socketId,
-        error,
-      });
-      emitter.emitError({
-        code: 'GEMINI_CONNECTION_FAILED',
-        message: 'No se pudo establecer conexion con el servicio de voz',
-        retryable: true,
-      });
-    }
+    await this.connectGemini(state, callbacks, emitter, sessionId, character);
   }
 
   relayAudio(socketId: string, audioBuffer: ArrayBuffer): void {
@@ -122,41 +58,11 @@ export class LiveCallService {
   }
 
   stopSession(socketId: string, emitter?: LiveSessionEmitter): void {
-    const state = this.sessions.get(socketId);
-    if (!state) return;
-
-    const durationMs = Date.now() - state.startedAt;
-
-    logger.info('[live-call.service] stopping session', {
-      socketId,
-      userId: state.userId,
-      characterId: state.characterId,
-      durationMs,
-    });
-
-    if (state.geminiSession) {
-      this.geminiLive.closeSession(state.geminiSession as Session);
-    }
-
-    emitter?.emitEnded({ reason: 'user_request', durationMs });
-    this.cleanupSession(socketId);
+    this.terminateSession(socketId, 'user_request', emitter);
   }
 
   handleDisconnect(socketId: string): void {
-    const state = this.sessions.get(socketId);
-    if (!state) return;
-
-    const durationMs = Date.now() - state.startedAt;
-    logger.info('[live-call.service] client disconnected, cleaning up', {
-      socketId,
-      userId: state.userId,
-      durationMs,
-    });
-
-    if (state.geminiSession) {
-      this.geminiLive.closeSession(state.geminiSession as Session);
-    }
-    this.cleanupSession(socketId);
+    this.terminateSession(socketId, 'user_request');
   }
 
   handleMute(socketId: string, muted: boolean): void {
@@ -166,6 +72,119 @@ export class LiveCallService {
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
+
+  private async loadCharacter(
+    characterId: string,
+    emitter: LiveSessionEmitter,
+  ): Promise<Character | null> {
+    const character = await this.characterRepo.findOne({ where: { id: characterId } } as any);
+
+    if (!character) {
+      emitter.emitError({
+        code: 'CHARACTER_NOT_FOUND',
+        message: 'Personaje no encontrado',
+        retryable: false,
+      });
+      return null;
+    }
+
+    return character;
+  }
+
+  private buildSessionState(
+    socketId: string,
+    userId: string,
+    payload: LiveStartPayload,
+    character: Character,
+  ): LiveSessionState {
+    const now = Date.now();
+    return {
+      socketId,
+      userId,
+      characterId: payload.characterId,
+      characterVectorDbName: character.vectorDbName || '',
+      geminiSession: null,
+      startedAt: now,
+      lastActivityAt: now,
+      transcriptBuffer: { user: '', model: '' },
+      transcriptHistory: [],
+      inactivityTimer: null,
+    };
+  }
+
+  private async connectGemini(
+    state: LiveSessionState,
+    callbacks: GeminiLiveCallbacks,
+    emitter: LiveSessionEmitter,
+    sessionId: string,
+    character: Character,
+  ): Promise<void> {
+    const voiceName = character.voiceId || DEFAULT_VOICE;
+    const systemInstruction = buildSystemPrompt(character);
+
+    logger.info('[live-call.service] starting session', {
+      sessionId,
+      socketId: state.socketId,
+      userId: state.userId,
+      characterId: state.characterId,
+      voiceName,
+    });
+
+    try {
+      const session = await this.geminiLive.connect({
+        voiceName,
+        systemInstruction,
+        callbacks,
+      });
+
+      state.geminiSession = session;
+      this.sessions.set(state.socketId, state);
+      this.resetInactivityTimer(state, emitter);
+
+      emitter.emitReady({
+        sessionId,
+        voiceName,
+        characterName: character.name,
+      });
+    } catch (error) {
+      logger.error('[live-call.service] failed to connect to Gemini', {
+        sessionId,
+        socketId: state.socketId,
+        error,
+      });
+      emitter.emitError({
+        code: 'GEMINI_CONNECTION_FAILED',
+        message: 'No se pudo establecer conexion con el servicio de voz',
+        retryable: true,
+      });
+    }
+  }
+
+  private terminateSession(
+    socketId: string,
+    reason: 'user_request' | 'gemini_closed' | 'timeout' | 'error',
+    emitter?: LiveSessionEmitter,
+  ): void {
+    const state = this.sessions.get(socketId);
+    if (!state) return;
+
+    const durationMs = Date.now() - state.startedAt;
+
+    logger.info('[live-call.service] terminating session', {
+      socketId,
+      userId: state.userId,
+      characterId: state.characterId,
+      reason,
+      durationMs,
+    });
+
+    if (state.geminiSession) {
+      this.geminiLive.closeSession(state.geminiSession as Session);
+    }
+
+    emitter?.emitEnded({ reason, durationMs });
+    this.cleanupSession(socketId);
+  }
 
   private buildGeminiCallbacks(
     state: LiveSessionState,

@@ -1,4 +1,3 @@
-import { AppDataSource } from "../../config/database.js";
 import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
@@ -22,17 +21,17 @@ import { getEncodingFromMimeType, getFileExtensionFromMimeType } from "../../sha
 import { buildSystemPrompt } from "../prompts/character-prompt.js";
 import type { ChatFlowErrorCode } from "../../domain/errors/chat-flow.error.js";
 import { ChatFlowError } from "../../domain/errors/chat-flow.error.js";
-export { ChatFlowError, ChatFlowErrorCode };
+import type { IRepository, IDataSource } from "../../domain/repositories/repository.interfaces.js";
 
 export class ChatService {
-  private conversationRepo = AppDataSource.getRepository(Conversation);
-  private messageRepo = AppDataSource.getRepository(Message);
-
   constructor(
     private gemini: GeminiService,
     private voice: ITextToSpeech & ISpeechToText,
     private vectorStore: ChromaRepository,
     private storageService: IStorageService,
+    private conversationRepo: IRepository<Conversation>,
+    private messageRepo: IRepository<Message>,
+    private dataSource: IDataSource,
     private readonly storageBucket: string = env.SUPABASE_STORAGE_BUCKET
   ) {}
 
@@ -215,7 +214,7 @@ export class ChatService {
       aiResponseLength: aiResponseText.length,
     });
 
-    const savedAssistantMessage = await AppDataSource.transaction(async (manager) => {
+    const savedAssistantMessage = await this.dataSource.transaction(async (manager) => {
       await manager.save(Message, { conversationId, role: "user", content: userText });
       return manager.save(Message, {
         conversationId,
@@ -353,7 +352,7 @@ export class ChatService {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta");
     }
 
-    const { savedAssistantMessage } = await AppDataSource.transaction(async (manager) => {
+    const { savedAssistantMessage } = await this.dataSource.transaction(async (manager) => {
       await manager.save(Message, {
         conversationId: input.conversationId,
         role: "user",
@@ -460,7 +459,7 @@ export class ChatService {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta del personaje B");
     }
 
-    const persisted = await AppDataSource.transaction(async (manager) => {
+    const persisted = await this.dataSource.transaction(async (manager) => {
       const userMessage = await manager.save(Message, {
         conversationId,
         role: "user",
@@ -504,29 +503,30 @@ export class ChatService {
     ];
 
     if (env.DEBATE_TTS_ENABLED) {
-      const audioA = await this.synthesizeAndUpload(
-        responseA,
-        speakerA.voiceId,
-        persisted.speakerAMessage.id,
-        userId,
-        conversationId,
-        { ...traceCtx, speaker: "A", speakerId: speakerA.id }
-      );
+      const [audioA, audioB] = await Promise.all([
+        this.synthesizeAndUpload(
+          responseA,
+          speakerA.voiceId,
+          persisted.speakerAMessage.id,
+          userId,
+          conversationId,
+          { ...traceCtx, speaker: "A", speakerId: speakerA.id }
+        ),
+        this.synthesizeAndUpload(
+          responseB,
+          speakerB.voiceId,
+          persisted.speakerBMessage.id,
+          userId,
+          conversationId,
+          { ...traceCtx, speaker: "B", speakerId: speakerB.id }
+        ),
+      ]);
 
       if ("audioBase64" in audioA) {
         responses[0].audioBase64 = audioA.audioBase64;
       } else {
         responses[0].warning = audioA.warning;
       }
-
-      const audioB = await this.synthesizeAndUpload(
-        responseB,
-        speakerB.voiceId,
-        persisted.speakerBMessage.id,
-        userId,
-        conversationId,
-        { ...traceCtx, speaker: "B", speakerId: speakerB.id }
-      );
 
       if ("audioBase64" in audioB) {
         responses[1].audioBase64 = audioB.audioBase64;

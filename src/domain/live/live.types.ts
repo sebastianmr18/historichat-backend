@@ -74,7 +74,7 @@ export interface LiveSessionState {
   userId: string;
   characterId: string;
   characterVectorDbName: string;
-  geminiSession: unknown;
+  geminiSession: import('@google/genai').Session | null;
   startedAt: number;
   lastActivityAt: number;
   transcriptBuffer: TranscriptBuffer;

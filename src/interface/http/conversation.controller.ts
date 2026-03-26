@@ -5,15 +5,17 @@ import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
 import { logger } from "../../infrastructure/logging/logger.js";
-import { storageService } from "../storage/storage.service.js";
 import { extractUserId } from "../../api/auth.middleware.js";
 import { serializeError } from "../../shared/errors.js";
 import { generateTraceId } from "../../shared/trace.js";
+import { IStorageService } from "../../shared/types.js";
 
 export class ConversationController {
   private characterRepo = AppDataSource.getRepository(Character);
   private conversationRepo = AppDataSource.getRepository(Conversation);
   private messageRepo = AppDataSource.getRepository(Message);
+
+  constructor(private readonly storage: IStorageService) {}
 
   private isDebateConversation(conversation: Conversation): boolean {
     return Boolean(conversation.secondaryCharacterId);
@@ -62,7 +64,7 @@ export class ConversationController {
         if (!message.audioPath) return message;
 
         try {
-          const audioUrl = await storageService.getSignedUrl(
+          const audioUrl = await this.storage.getSignedUrl(
             env.SUPABASE_STORAGE_BUCKET,
             message.audioPath,
             env.SIGNED_URL_EXPIRES_SECONDS
@@ -241,7 +243,7 @@ export class ConversationController {
 
       if (audioPaths.length > 0) {
         try {
-          await storageService.deleteFiles(env.SUPABASE_STORAGE_BUCKET, audioPaths);
+          await this.storage.deleteFiles(env.SUPABASE_STORAGE_BUCKET, audioPaths);
           logger.debug("[conversation.destroy] audio_cleanup_completed", {
             traceId,
             event: "delete_conversation",

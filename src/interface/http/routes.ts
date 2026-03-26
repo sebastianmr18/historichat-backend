@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { CharacterController } from './character.controller.js';
 import { ConversationController } from './conversation.controller.js';
 import { ragQueryController } from './rag.controller.js';
+import { storageService } from '../storage/storage.service.js';
 
 const router = Router();
-const characterCtrl = new CharacterController();
-const conversationCtrl = new ConversationController();
+const characterCtrl = new CharacterController(storageService);
+const conversationCtrl = new ConversationController(storageService);
 
 router.get('/characters', (req, res) => characterCtrl.getAll(req, res));
 router.post('/characters', (req, res) => characterCtrl.create(req, res));

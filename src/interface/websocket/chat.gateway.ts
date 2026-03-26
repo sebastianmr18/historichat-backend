@@ -1,8 +1,9 @@
 import { Server, Socket } from "socket.io";
-import { ChatFlowError, ChatService } from "../../application/services/chat.service.js";
+import { ChatService } from "../../application/services/chat.service.js";
 import { logger } from "../../infrastructure/logging/logger.js";
 import { serializeError } from "../../shared/errors.js";
 import { generateTraceId } from "../../shared/trace.js";
+import { toClientError } from "../../shared/ws-errors.js";
 import { wsAuthMiddleware } from "./ws-auth.middleware.js";
 
 export class ChatGateway {
@@ -30,31 +31,14 @@ export class ChatGateway {
     return Buffer.from(normalized, "base64");
   }
 
-  private toClientError(error: unknown, fallbackMessage: string) {
-    if (error instanceof ChatFlowError) {
-      return {
-        message: error.message,
-        code: error.code,
-        stage: error.stage,
-        retryable: error.retryable,
-      };
-    }
-
-    if (error instanceof Error) {
-      return {
-        message: error.message || fallbackMessage,
-        code: "UNEXPECTED_ERROR",
-        stage: "unknown",
-        retryable: true,
-      };
-    }
-
-    return {
-      message: fallbackMessage,
-      code: "UNEXPECTED_ERROR",
-      stage: "unknown",
-      retryable: true,
-    };
+  private emitAiMessage(conversationId: string, result: { text: string; audioBase64?: string; messageId?: number; speakerId?: string; speakerName?: string }) {
+    this.io.to(conversationId).emit("ai_message", {
+      text: result.text,
+      audio: result.audioBase64,
+      message_id: result.messageId,
+      speaker_id: result.speakerId,
+      speaker_name: result.speakerName,
+    });
   }
 
   private initialize() {
@@ -135,13 +119,7 @@ export class ChatGateway {
         audioBase64Length: result.audioBase64?.length ?? 0,
       });
 
-      this.io.to(conversationId).emit("ai_message", {
-        text: result.text,
-        audio: result.audioBase64,
-        message_id: result.messageId,
-        speaker_id: result.speakerId,
-        speaker_name: result.speakerName,
-      });
+      this.emitAiMessage(conversationId, result);
 
       if (result.warning) {
         socket.emit("error", result.warning);
@@ -156,7 +134,7 @@ export class ChatGateway {
         error: serializeError(error),
       });
 
-      socket.emit("error", this.toClientError(error, "Error procesando mensaje"));
+      socket.emit("error", toClientError(error, "Error procesando mensaje"));
     }
   }
 
@@ -194,13 +172,7 @@ export class ChatGateway {
 
       socket.emit("transcription", { text: result.transcription });
 
-      this.io.to(data.conversationId).emit("ai_message", {
-        text: result.text,
-        audio: result.audioBase64,
-        message_id: result.messageId,
-        speaker_id: result.speakerId,
-        speaker_name: result.speakerName,
-      });
+      this.emitAiMessage(data.conversationId, result);
 
       if (result.warning) {
         socket.emit("error", result.warning);
@@ -211,7 +183,7 @@ export class ChatGateway {
         error: serializeError(error),
       });
 
-      const clientError = this.toClientError(error, "Error procesando audio");
+      const clientError = toClientError(error, "Error procesando audio");
 
       if (clientError.code === "NO_SPEECH") {
         socket.emit("no_speech", { message: clientError.message });
@@ -262,7 +234,7 @@ export class ChatGateway {
 
       socket.emit("debate_error", {
         traceId: trace.traceId,
-        ...this.toClientError(error, "Error procesando turno de debate"),
+        ...toClientError(error, "Error procesando turno de debate"),
       });
     }
   }

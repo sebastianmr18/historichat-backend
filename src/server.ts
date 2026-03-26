@@ -15,6 +15,9 @@ import { storageService } from './interface/storage/storage.service.js';
 import { GeminiLiveAdapter } from './infrastructure/ai/gemini-live.adapter.js';
 import { LiveCallService } from './application/services/live-call.service.js';
 import { LiveGateway } from './interface/websocket/live.gateway.js';
+import { Conversation } from './infrastructure/database/entities/Conversation.js';
+import { Message } from './infrastructure/database/entities/Message.js';
+import { Character } from './infrastructure/database/entities/Character.js';
 
 const startServer = async () => {
   try {
@@ -25,7 +28,15 @@ const startServer = async () => {
     const googleCloudVoiceAdapter = new GoogleCloudVoiceAdapter();
     const chromaRepo = new ChromaRepository();
 
-    const chatService = new ChatService(geminiService, googleCloudVoiceAdapter, chromaRepo, storageService);
+    const chatService = new ChatService(
+      geminiService,
+      googleCloudVoiceAdapter,
+      chromaRepo,
+      storageService,
+      AppDataSource.getRepository(Conversation),
+      AppDataSource.getRepository(Message),
+      AppDataSource,
+    );
 
     const httpServer = createServer(app);
     const io = new SocketIOServer(httpServer, {
@@ -42,7 +53,7 @@ const startServer = async () => {
     logger.info("ChatGateway inicializado");
 
     const geminiLiveAdapter = new GeminiLiveAdapter();
-    const liveCallService = new LiveCallService(geminiLiveAdapter, chromaRepo);
+    const liveCallService = new LiveCallService(geminiLiveAdapter, chromaRepo, AppDataSource.getRepository(Character));
     new LiveGateway(io, liveCallService);
     logger.info("LiveGateway inicializado (namespace /live)");
 
