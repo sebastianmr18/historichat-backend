@@ -44,7 +44,7 @@ export class ConversationController {
   }
 
   private shapeConversationPayload(conversation: Conversation, mappedMessages: any[]) {
-    const mode = this.isDebateConversation(conversation) ? "debate" : "single";
+    const mode = this.isDebateConversation(conversation) ? "debate" : "interview";
     return {
       ...conversation,
       mode,
@@ -158,7 +158,22 @@ export class ConversationController {
         userId,
       });
       const savedConversation = await this.conversationRepo.save(newConversation);
-      res.status(201).json(savedConversation);
+
+      const persistedConversation = await this.conversationRepo.findOne({
+        where: { id: savedConversation.id, userId },
+        relations: {
+          character: true,
+          secondaryCharacter: true,
+          messages: { speakerCharacter: true },
+        },
+      });
+
+      if (!persistedConversation) {
+        return res.status(500).json({ error: "No se pudo recuperar la conversación creada" });
+      }
+
+      const payload = await this.withSignedUrlsForConversation(persistedConversation);
+      res.status(201).json(payload);
     } catch (error) {
       res.status(500).json({ error: "Error al crear la conversación" });
     }

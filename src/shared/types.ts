@@ -1,3 +1,7 @@
+export type ConversationMode = 'interview';
+export type LegacyConversationMode = 'chat' | 'interview';
+export type PromptMode = 'interview' | 'call' | 'debate';
+
 export interface ITextToSpeech {
   synthesize(text: string, voiceName?: string): Promise<Buffer>;
 }
@@ -24,6 +28,7 @@ export interface ProcessAudioMessageInput {
   audioBuffer: Buffer;
   mimeType: string;
   trace?: RequestTraceContext;
+  mode?: ConversationMode;
 }
 
 export interface ChatResponse {
@@ -32,6 +37,7 @@ export interface ChatResponse {
   speakerId?: string;
   speakerName?: string;
   audioBase64?: string;
+  suggestions?: string[];
   warning?: {
     code: string;
     message: string;

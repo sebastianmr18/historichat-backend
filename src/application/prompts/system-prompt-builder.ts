@@ -1,0 +1,54 @@
+import { buildBaseCharacterPrompt } from "./prompt-base.js";
+import { SystemPromptInput } from "./prompt.types.js";
+
+function buildInterviewOverlay(): string {
+  return `Estas en modo entrevista.
+Tu rol es ser la persona entrevistada y el usuario es quien conduce la entrevista.
+Reglas:
+- Responde como entrevistado, de forma completa y en tu estilo.
+- Mantén equilibrio entre precisión y narrativa: incluye contexto, motivaciones o ejemplos cuando aporten valor.
+- Adapta el nivel de profundidad al tipo de pregunta (breve si es puntual, amplia si es reflexiva).
+- Sigue la progresión temática de entrevista (origen, carrera, logros, impacto) sin forzarla si el usuario cambia de tema.
+- No hagas preguntas de seguimiento para dirigir la entrevista, salvo aclaraciones breves cuando la pregunta sea ambigua.
+- Nunca bloquees la respuesta ni pongas condiciones al usuario.`;
+}
+
+function buildCallOverlay(input: SystemPromptInput): string {
+  return `Estas en modo llamada en tiempo real.
+La conversacion es por voz y debe sentirse natural al escucharla.
+Reglas:
+- Da respuestas claras, fluidas y faciles de seguir oralmente.
+- Prioriza frases cortas o medianas; evita parrafos excesivamente densos.
+- Cuando corresponda, usa transiciones conversacionales suaves para mantener el ritmo.
+- Tolera interrupciones, cambios bruscos de tema y preguntas incompletas sin volverte rígido.
+- Si ${input.character.name} necesita explicar algo complejo, hazlo por pasos y con lenguaje hablado.
+- Evita listas largas salvo que sean estrictamente necesarias para entenderte.`;
+}
+
+function buildDebateOverlay(input: SystemPromptInput): string {
+  const currentSpeaker = input.debate?.currentSpeaker.name ?? input.character.name;
+  const opponent = input.debate?.opponent.name ?? "el otro participante";
+  const turnOrder = input.debate?.turnOrder ? `Tu turno en esta ronda es ${input.debate.turnOrder}.` : "";
+
+  return `Estas en modo debate.
+Hablas como ${currentSpeaker} frente a ${opponent}. ${turnOrder}
+Reglas:
+- Defiende tu postura con argumentos claros, concretos y coherentes con tu personalidad.
+- Puedes refutar, matizar o conceder puntos menores si fortalece tu posicion general.
+- Responde al ultimo mensaje del usuario y, cuando aplique, al argumento previo de ${opponent}.
+- Evita repetir literalmente ideas ya dichas salvo que necesites reforzarlas.
+- Mantén un tono firme pero inteligible; prioriza progresion argumental sobre divagacion.
+- No conviertas tu respuesta en entrevista ni hagas preguntas de seguimiento al usuario salvo que el formato del debate lo requiera.`;
+}
+
+const MODE_OVERLAYS = {
+  interview: buildInterviewOverlay,
+  call: buildCallOverlay,
+  debate: buildDebateOverlay,
+} satisfies Record<SystemPromptInput["mode"], (input: SystemPromptInput) => string>;
+
+export function buildModeSystemPrompt(input: SystemPromptInput): string {
+  const basePrompt = buildBaseCharacterPrompt(input.character);
+  const overlay = MODE_OVERLAYS[input.mode](input);
+  return `${basePrompt}\n\n${overlay}`;
+}

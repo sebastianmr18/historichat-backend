@@ -8,7 +8,7 @@ import { ChatFlowError } from "../../../domain/errors/chat-flow.error.js";
 
 function createMockGemini() {
   return {
-    generateResponse: vi.fn().mockResolvedValue("AI response text"),
+    generateResponse: vi.fn().mockResolvedValue({ text: "AI response text" }),
   };
 }
 
@@ -107,8 +107,8 @@ vi.mock("../../../config/env.js", () => ({
   },
 }));
 
-vi.mock("../../prompts/character-prompt.js", () => ({
-  buildSystemPrompt: vi.fn().mockReturnValue("system prompt"),
+vi.mock("../../prompts/system-prompt-builder.js", () => ({
+  buildModeSystemPrompt: vi.fn().mockReturnValue("system prompt"),
 }));
 
 // ---------------------------------------------------------------------------
@@ -305,8 +305,8 @@ describe("ChatService", () => {
 
     it("generates responses from both characters", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce("Response from A")
-        .mockResolvedValueOnce("Response from B");
+        .mockResolvedValueOnce({ text: "Response from A" })
+        .mockResolvedValueOnce({ text: "Response from B" });
 
       const result = await service.processDebateMessage("conv-debate", "user-1", "Discuss ethics");
 
@@ -334,16 +334,17 @@ describe("ChatService", () => {
 
     it("calls generateAiResponse for speaker B with speaker A's response in history", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce("A says hello")
-        .mockResolvedValueOnce("B replies");
+        .mockResolvedValueOnce({ text: "A says hello" })
+        .mockResolvedValueOnce({ text: "B replies" });
 
       await service.processDebateMessage("conv-debate", "user-1", "Start");
 
-      // Second call should include speaker A's response in the history
-      const secondCallHistory = mockGemini.generateResponse.mock.calls[1];
+      // Second Gemini call corresponds to speaker B main response.
+      // Debate flow does not generate suggestions in this refactor.
+      const speakerBMainCall = mockGemini.generateResponse.mock.calls[1];
       // Args: (systemPrompt, history, userText, context)
       // history is the 2nd argument
-      expect(secondCallHistory[1]).toEqual(
+      expect(speakerBMainCall[1]).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ role: "assistant", content: "A says hello" }),
         ])
@@ -352,8 +353,8 @@ describe("ChatService", () => {
 
     it("synthesizes audio for both speakers when DEBATE_TTS_ENABLED", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce("A speaks")
-        .mockResolvedValueOnce("B speaks");
+        .mockResolvedValueOnce({ text: "A speaks" })
+        .mockResolvedValueOnce({ text: "B speaks" });
 
       const result = await service.processDebateMessage("conv-debate", "user-1", "Debate!");
 

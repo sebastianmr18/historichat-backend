@@ -4,6 +4,8 @@ import { logger } from "../../infrastructure/logging/logger.js";
 import { serializeError } from "../../shared/errors.js";
 import { generateTraceId } from "../../shared/trace.js";
 import { toClientError } from "../../shared/ws-errors.js";
+import { normalizeConversationMode } from "../../shared/conversation-mode.js";
+import { ConversationMode, LegacyConversationMode } from "../../shared/types.js";
 import { wsAuthMiddleware } from "./ws-auth.middleware.js";
 
 export class ChatGateway {
@@ -41,6 +43,16 @@ export class ChatGateway {
     });
   }
 
+  private emitSuggestions(conversationId: string, suggestions?: string[]) {
+    if (!suggestions || suggestions.length === 0) {
+      return;
+    }
+    this.io.to(conversationId).emit("suggestions", {
+      conversationId,
+      suggestions,
+    });
+  }
+
   private initialize() {
     this.registerAuthMiddleware();
     this.registerEventHandlers();
@@ -67,19 +79,28 @@ export class ChatGateway {
         });
       });
 
-      socket.on("send_text", async (data: { conversationId: string; text: string }) => {
+      socket.on("send_text", async (data: { conversationId: string; text: string; mode?: LegacyConversationMode }) => {
         const userId = socket.data.userId as string;
         const trace = this.buildTrace(socket, "send_text", data.conversationId);
+        const normalizedMode = normalizeConversationMode(data.mode);
         logger.debug("[chat.gateway.send_text] received", {
           ...trace,
           textLength: data.text?.length ?? 0,
+          modeOriginal: normalizedMode.originalMode ?? null,
+          modeEffective: normalizedMode.effectiveMode,
         });
-        await this.handleTextFlow(socket, data.conversationId, userId, data.text, trace);
+        await this.handleTextFlow(socket, data.conversationId, userId, data.text, normalizedMode.effectiveMode, trace);
       });
 
-      socket.on("send_audio", async (data: { conversationId: string; audioBase64: string; mimeType?: string }) => {
+      socket.on("send_audio", async (data: { conversationId: string; audioBase64: string; mimeType?: string; mode?: LegacyConversationMode }) => {
         const trace = this.buildTrace(socket, "send_audio", data.conversationId);
-        await this.handleAudioFlow(socket, data, trace);
+        const normalizedMode = normalizeConversationMode(data.mode);
+        logger.debug("[chat.gateway.send_audio] received", {
+          ...trace,
+          modeOriginal: normalizedMode.originalMode ?? null,
+          modeEffective: normalizedMode.effectiveMode,
+        });
+        await this.handleAudioFlow(socket, { ...data, mode: normalizedMode.effectiveMode }, trace);
       });
 
       socket.on("send_debate_text", async (data: { conversationId: string; text: string }) => {
@@ -103,10 +124,11 @@ export class ChatGateway {
     conversationId: string,
     userId: string,
     text: string,
+    mode?: ConversationMode,
     trace?: { traceId?: string; socketId?: string; event?: string }
   ) {
     try {
-      const result = await this.chatService.processTextMessage(conversationId, userId, text, trace);
+      const result = await this.chatService.processTextMessage(conversationId, userId, text, mode, trace);
 
       logger.debug("[chat.gateway.send_text] processed", {
         traceId: trace?.traceId,
@@ -120,6 +142,8 @@ export class ChatGateway {
       });
 
       this.emitAiMessage(conversationId, result);
+
+      this.emitSuggestions(conversationId, result.suggestions);
 
       if (result.warning) {
         socket.emit("error", result.warning);
@@ -140,7 +164,7 @@ export class ChatGateway {
 
   private async handleAudioFlow(
     socket: Socket,
-    data: { conversationId: string; audioBase64: string; mimeType?: string },
+    data: { conversationId: string; audioBase64: string; mimeType?: string; mode?: ConversationMode },
     trace: ReturnType<ChatGateway["buildTrace"]>
   ) {
     try {
@@ -160,6 +184,7 @@ export class ChatGateway {
         audioBuffer,
         mimeType: data.mimeType ?? "audio/webm",
         trace,
+        mode: data.mode,
       });
 
       logger.debug("[chat.gateway.send_audio] processed", {
@@ -173,6 +198,8 @@ export class ChatGateway {
       socket.emit("transcription", { text: result.transcription });
 
       this.emitAiMessage(data.conversationId, result);
+
+      this.emitSuggestions(data.conversationId, result.suggestions);
 
       if (result.warning) {
         socket.emit("error", result.warning);

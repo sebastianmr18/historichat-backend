@@ -4,6 +4,7 @@ import { Message } from "../../infrastructure/database/entities/Message.js";
 import { GeminiService } from "../../infrastructure/ai/gemini.service.js";
 import {
   ChatResponse,
+  ConversationMode,
   DebateTurnCharacterResult,
   DebateTurnResult,
   IStorageService,
@@ -18,7 +19,10 @@ import { logger } from "../../infrastructure/logging/logger.js";
 import { serializeError } from "../../shared/errors.js";
 import { createTraceContext } from "../../shared/trace.js";
 import { getEncodingFromMimeType, getFileExtensionFromMimeType } from "../../shared/mime-utils.js";
-import { buildSystemPrompt } from "../prompts/character-prompt.js";
+import { suggestionsSchema } from "../prompts/suggestions-prompt.js";
+import { PromptDebateContext } from "../prompts/prompt.types.js";
+import { buildModeSystemPrompt } from "../prompts/system-prompt-builder.js";
+import { buildModeSuggestionsPrompt } from "../prompts/suggestions-prompt-builder.js";
 import type { ChatFlowErrorCode } from "../../domain/errors/chat-flow.error.js";
 import { ChatFlowError } from "../../domain/errors/chat-flow.error.js";
 import type { IRepository, IDataSource } from "../../domain/repositories/repository.interfaces.js";
@@ -139,8 +143,12 @@ export class ChatService {
     conversationId: string;
     character: Character;
     userText: string;
+    mode: "interview" | "call" | "debate";
     history?: Array<Pick<Message, "role" | "content">>;
-  }) {
+    characterName?: string;
+    debate?: PromptDebateContext;
+    generateSuggestions?: boolean;
+  }): Promise<{ text: string; suggestions?: string[] }> {
     const history = params.history ?? (await this.loadConversationHistory(params.conversationId));
 
     const context = await this.vectorStore.getContext(
@@ -148,12 +156,18 @@ export class ChatService {
       params.character.vectorDbName || "default"
     );
 
-    const systemPrompt = buildSystemPrompt(params.character);
+    const systemPrompt = buildModeSystemPrompt({
+      character: params.character,
+      mode: params.mode,
+      debate: params.debate,
+      isRealtime: params.mode === "call",
+    });
 
     logger.debug("[chat.generateAiResponse] context_ready", {
       conversationId: params.conversationId,
       characterId: params.character.id,
       characterName: params.character.name,
+      mode: params.mode,
       historyCount: history.length,
       userTextLength: params.userText.length,
       contextLength: context?.length ?? 0,
@@ -162,20 +176,57 @@ export class ChatService {
     logger.debug("[systemPrompt]", { systemPrompt });
     logger.debug("[context]", { context });
 
-    const aiResponseText = await this.gemini.generateResponse(
+    // Generate main AI response
+    const aiResponse = await this.gemini.generateResponse(
       systemPrompt,
       history as any,
       params.userText,
       context
     );
 
-    return aiResponseText;
+    const aiResponseText = aiResponse.text;
+
+    // Generate suggestions in parallel (graceful degradation if it fails)
+    let suggestions: string[] | undefined;
+    if (params.generateSuggestions !== false) {
+      try {
+        const suggestionsPrompt = buildModeSuggestionsPrompt({
+          mode: params.mode,
+          lastMessages: history,
+          characterName: params.characterName ?? params.character.name,
+          debate: params.debate,
+        });
+        const suggestionsResponse = await this.gemini.generateResponse(
+          "You are a helpful assistant that generates follow-up suggestions.",
+          [],
+          suggestionsPrompt,
+          undefined,
+          suggestionsSchema
+        );
+
+        if (suggestionsResponse.structuredOutput) {
+          const parsed = suggestionsResponse.structuredOutput as { suggestions?: string[] };
+          suggestions = parsed.suggestions?.filter(s => typeof s === 'string' && s.length > 0);
+        }
+      } catch (error) {
+        logger.warn("[chat.generateAiResponse] suggestions generation failed, proceeding without", {
+          conversationId: params.conversationId,
+          error: serializeError(error),
+        });
+      }
+    }
+
+    return {
+      text: aiResponseText,
+      suggestions,
+    };
   }
 
   async processTextMessage(
     conversationId: string,
     userId: string,
     userText: string,
+    mode?: ConversationMode,
     trace?: RequestTraceContext
   ): Promise<ChatResponse> {
     const traceCtx = createTraceContext(trace, {
@@ -187,6 +238,7 @@ export class ChatService {
     logger.debug("[chat.processTextMessage] started", {
       ...traceCtx,
       userTextLength: userText.length,
+      mode: mode ?? 'interview',
     });
 
     const conversation = await this.getConversation(conversationId, userId);
@@ -198,13 +250,17 @@ export class ChatService {
     });
 
     let aiResponseText: string;
+    let suggestions: string[] | undefined;
 
     try {
-      aiResponseText = await this.generateAiResponse({
+      const aiResponse = await this.generateAiResponse({
         conversationId,
         character: conversation.character,
         userText,
+        mode: mode ?? "interview",
       });
+      aiResponseText = aiResponse.text;
+      suggestions = aiResponse.suggestions;
     } catch (error) {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta");
     }
@@ -212,6 +268,7 @@ export class ChatService {
     logger.debug("[chat.processTextMessage] ai_response_generated", {
       ...traceCtx,
       aiResponseLength: aiResponseText.length,
+      hasSuggestions: Boolean(suggestions && suggestions.length > 0),
     });
 
     const savedAssistantMessage = await this.dataSource.transaction(async (manager) => {
@@ -243,6 +300,7 @@ export class ChatService {
       messageId: savedAssistantMessage.id,
       speakerId: conversation.character.id,
       speakerName: conversation.character.name,
+      suggestions,
       ...audioResult,
     };
   }
@@ -341,13 +399,17 @@ export class ChatService {
     const uploadedUserAudioPath = uploadResult.value;
 
     let aiResponseText: string;
+    let suggestions: string[] | undefined;
 
     try {
-      aiResponseText = await this.generateAiResponse({
+      const aiResponse = await this.generateAiResponse({
         conversationId: input.conversationId,
         character: conversation.character,
         userText: transcription,
+        mode: input.mode ?? "interview",
       });
+      aiResponseText = aiResponse.text;
+      suggestions = aiResponse.suggestions;
     } catch (error) {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta");
     }
@@ -393,6 +455,7 @@ export class ChatService {
       messageId: savedAssistantMessage.id,
       speakerId: conversation.character.id,
       speakerName: conversation.character.name,
+      suggestions,
       ...audioResult,
     };
   }
@@ -433,12 +496,20 @@ export class ChatService {
     let responseB: string;
 
     try {
-      responseA = await this.generateAiResponse({
+      const aiResponseA = await this.generateAiResponse({
         conversationId,
         character: speakerA,
         userText,
+        mode: "debate",
         history: baseHistory,
+        debate: {
+          currentSpeaker: { id: speakerA.id, name: speakerA.name, role: speakerA.role },
+          opponent: { id: speakerB.id, name: speakerB.name, role: speakerB.role },
+          turnOrder: "A",
+        },
+        generateSuggestions: false,
       });
+      responseA = aiResponseA.text;
     } catch (error) {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta del personaje A");
     }
@@ -449,12 +520,20 @@ export class ChatService {
     ];
 
     try {
-      responseB = await this.generateAiResponse({
+      const aiResponseB = await this.generateAiResponse({
         conversationId,
         character: speakerB,
         userText,
+        mode: "debate",
         history: historyForSpeakerB,
+        debate: {
+          currentSpeaker: { id: speakerB.id, name: speakerB.name, role: speakerB.role },
+          opponent: { id: speakerA.id, name: speakerA.name, role: speakerA.role },
+          turnOrder: "B",
+        },
+        generateSuggestions: false,
       });
+      responseB = aiResponseB.text;
     } catch (error) {
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta del personaje B");
     }
