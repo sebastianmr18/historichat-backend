@@ -7,15 +7,17 @@ export class GeminiService {
   private genAI: GoogleGenerativeAI;
   private model: ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
   private modelWithSchema: (schema: unknown) => ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
+  private modelName: string;
 
   constructor() {
     this.genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash", // Actualizado a la versión más reciente disponible en 2026
+    this.modelName = env.GEMINI_CHAT_MODEL;
+    this.model = this.genAI.getGenerativeModel({
+      model: this.modelName,
     });
-    // Store a reference to create models with schemas
+    // Store a reference to create models with schemas.
     this.modelWithSchema = (schema: unknown) => this.genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: this.modelName,
       generationConfig: {
         responseSchema: schema,
         responseMimeType: "application/json",

@@ -17,7 +17,7 @@ const envSchema = z.object({
   SUPABASE_STORAGE_BUCKET: z.string().default("communications"),
   SIGNED_URL_EXPIRES_SECONDS: z.coerce.number().int().positive().default(3600),
   GEMINI_API_KEY: z.string().min(1),
-  GEMINI_MODEL: z.string().default("gemini-2.5-flash-native-audio-preview-09-2025"),
+  GEMINI_CHAT_MODEL: z.string().default('gemini-3.1-flash-lite-preview'),
   GOOGLE_APPLICATION_CREDENTIALS: z
     .string()
     .min(1)
