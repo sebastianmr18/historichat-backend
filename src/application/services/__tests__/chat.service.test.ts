@@ -63,6 +63,7 @@ const CHARACTER_B = {
 
 const mockMessageFind = vi.fn().mockResolvedValue([]);
 const mockMessageUpdate = vi.fn().mockResolvedValue({ affected: 1 });
+const mockMessageDelete = vi.fn().mockResolvedValue({ affected: 1 });
 const mockConversationFindOne = vi.fn();
 
 const mockTransactionSave = vi.fn();
@@ -72,18 +73,19 @@ function createMockConversationRepo() {
 }
 
 function createMockMessageRepo() {
-  return { find: mockMessageFind, findOne: vi.fn(), create: vi.fn(), save: vi.fn(), update: mockMessageUpdate, delete: vi.fn() };
+  return { find: mockMessageFind, findOne: vi.fn(), create: vi.fn(), save: vi.fn(), update: mockMessageUpdate, delete: mockMessageDelete };
 }
+
+let globalSaveCounter = 0;
 
 function createMockDataSource() {
   return {
     transaction: vi.fn(async (cb: any) => {
-      let callCount = 0;
       const manager = {
         save: vi.fn(async (_entity: any, data: any) => {
-          callCount++;
+          globalSaveCounter++;
           mockTransactionSave(data);
-          return { id: callCount, ...data };
+          return { id: globalSaveCounter, ...data };
         }),
       };
       return cb(manager);
@@ -124,6 +126,7 @@ describe("ChatService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    globalSaveCounter = 0;
 
     mockGemini = createMockGemini();
     mockVoice = createMockVoice();
@@ -361,6 +364,209 @@ describe("ChatService", () => {
       expect(mockVoice.synthesize).toHaveBeenCalledTimes(2);
       expect(result.responses[0].audioBase64).toBeDefined();
       expect(result.responses[1].audioBase64).toBeDefined();
+    });
+
+    it("invokes onUserMessagePersisted callback after persisting user message", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A" })
+        .mockResolvedValueOnce({ text: "B" });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      await service.processDebateMessage("conv-debate", "user-1", "Hello debate", undefined, callbacks);
+
+      expect(callbacks.onUserMessagePersisted).toHaveBeenCalledTimes(1);
+      expect(callbacks.onUserMessagePersisted).toHaveBeenCalledWith(
+        expect.objectContaining({ userText: "Hello debate" })
+      );
+      expect(callbacks.onUserMessagePersisted.mock.calls[0][0].userMessageId).toBeDefined();
+    });
+
+    it("invokes onTyping for A before onTurnReady for A, and onTyping for B before onTurnReady for B", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A response" })
+        .mockResolvedValueOnce({ text: "B response" });
+
+      const callOrder: string[] = [];
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(() => callOrder.push("userAck")),
+        onTyping: vi.fn((p: any) => callOrder.push(`typing_${p.turnOrder}`)),
+        onTurnReady: vi.fn((p: any) => callOrder.push(`turn_${p.turnOrder}`)),
+        onRoundCompleted: vi.fn(() => callOrder.push("roundComplete")),
+      };
+
+      await service.processDebateMessage("conv-debate", "user-1", "Go", undefined, callbacks);
+
+      expect(callOrder).toEqual([
+        "userAck",
+        "typing_A",
+        "turn_A",
+        "typing_B",
+        "turn_B",
+        "roundComplete",
+      ]);
+    });
+
+    it("includes turnOrder in onTurnReady callbacks", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A" })
+        .mockResolvedValueOnce({ text: "B" });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      await service.processDebateMessage("conv-debate", "user-1", "Go", undefined, callbacks);
+
+      expect(callbacks.onTurnReady).toHaveBeenCalledTimes(2);
+      expect(callbacks.onTurnReady.mock.calls[0][0]).toMatchObject({
+        speakerId: "char-a",
+        turnOrder: "A",
+      });
+      expect(callbacks.onTurnReady.mock.calls[1][0]).toMatchObject({
+        speakerId: "char-b",
+        turnOrder: "B",
+      });
+    });
+
+    it("attaches TTS warning in onTurnReady when TTS fails for a speaker", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A with audio" })
+        .mockResolvedValueOnce({ text: "B no audio" });
+
+      mockVoice.synthesize
+        .mockResolvedValueOnce(Buffer.from("audio-a"))
+        .mockRejectedValueOnce(new Error("TTS failed for B"));
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      const result = await service.processDebateMessage("conv-debate", "user-1", "Go", undefined, callbacks);
+
+      // Speaker A should have audio
+      expect(callbacks.onTurnReady.mock.calls[0][0].audioBase64).toBeDefined();
+      expect(callbacks.onTurnReady.mock.calls[0][0].warning).toBeUndefined();
+
+      // Speaker B should have warning, no audio
+      expect(callbacks.onTurnReady.mock.calls[1][0].audioBase64).toBeUndefined();
+      expect(callbacks.onTurnReady.mock.calls[1][0].warning).toMatchObject({ code: "TTS_FAILED" });
+
+      // onRoundCompleted should include the warning
+      expect(callbacks.onRoundCompleted.mock.calls[0][0].warnings).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: "TTS_FAILED" })])
+      );
+
+      // Result should also reflect the warning
+      expect(result.responses[1].warning).toMatchObject({ code: "TTS_FAILED" });
+    });
+
+    it("does not emit partial events when conversation is not in debate mode", async () => {
+      mockConversationFindOne.mockResolvedValue({
+        id: "conv-single",
+        userId: "user-1",
+        character: CHARACTER_A,
+        secondaryCharacter: null,
+        secondaryCharacterId: null,
+      });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      await expect(
+        service.processDebateMessage("conv-single", "user-1", "Hello", undefined, callbacks)
+      ).rejects.toMatchObject({ code: "DEBATE_NOT_AVAILABLE" });
+
+      expect(callbacks.onUserMessagePersisted).not.toHaveBeenCalled();
+      expect(callbacks.onTyping).not.toHaveBeenCalled();
+      expect(callbacks.onTurnReady).not.toHaveBeenCalled();
+      expect(callbacks.onRoundCompleted).not.toHaveBeenCalled();
+    });
+
+    it("works correctly without callbacks (backward compatible)", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A" })
+        .mockResolvedValueOnce({ text: "B" });
+
+      const result = await service.processDebateMessage("conv-debate", "user-1", "No callbacks");
+
+      expect(result.responses).toHaveLength(2);
+      expect(result.userText).toBe("No callbacks");
+    });
+
+    it("cleans up persisted messages when Speaker A generation fails", async () => {
+      mockGemini.generateResponse
+        .mockRejectedValueOnce(new Error("LLM down for A"));
+
+      await expect(
+        service.processDebateMessage("conv-debate", "user-1", "Fail A")
+      ).rejects.toThrow();
+
+      // User message was persisted (id=1), then A failed → cleanup should delete [1]
+      expect(mockMessageDelete).toHaveBeenCalledTimes(1);
+      expect(mockMessageDelete).toHaveBeenCalledWith([1]);
+    });
+
+    it("cleans up persisted messages when Speaker B generation fails after A succeeded", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A ok" })
+        .mockRejectedValueOnce(new Error("LLM down for B"));
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      await expect(
+        service.processDebateMessage("conv-debate", "user-1", "Fail B", undefined, callbacks)
+      ).rejects.toThrow();
+
+      // User message (id=1) and speaker A message (id=2) were persisted → cleanup deletes both
+      expect(mockMessageDelete).toHaveBeenCalledTimes(1);
+      expect(mockMessageDelete).toHaveBeenCalledWith([1, 2]);
+
+      // Speaker A turn was emitted before B failed
+      expect(callbacks.onTurnReady).toHaveBeenCalledTimes(1);
+      expect(callbacks.onTurnReady.mock.calls[0][0]).toMatchObject({
+        speakerId: "char-a",
+        turnOrder: "A",
+      });
+
+      // Round should NOT have completed
+      expect(callbacks.onRoundCompleted).not.toHaveBeenCalled();
+    });
+
+    it("does not call cleanup when no messages were persisted (pre-validation failure)", async () => {
+      mockConversationFindOne.mockResolvedValue({
+        id: "conv-single",
+        userId: "user-1",
+        character: CHARACTER_A,
+        secondaryCharacter: null,
+        secondaryCharacterId: null,
+      });
+
+      await expect(
+        service.processDebateMessage("conv-single", "user-1", "Hello")
+      ).rejects.toMatchObject({ code: "DEBATE_NOT_AVAILABLE" });
+
+      expect(mockMessageDelete).not.toHaveBeenCalled();
     });
   });
 });

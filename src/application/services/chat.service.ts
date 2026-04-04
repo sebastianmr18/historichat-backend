@@ -5,8 +5,10 @@ import { GeminiService } from "../../infrastructure/ai/gemini.service.js";
 import {
   ChatResponse,
   ConversationMode,
+  DebateProgressCallbacks,
   DebateTurnCharacterResult,
   DebateTurnResult,
+  DebateWarningPayload,
   IStorageService,
   ITextToSpeech,
   ISpeechToText,
@@ -45,6 +47,27 @@ export class ChatService {
     }
 
     return new ChatFlowError(fallbackCode, fallbackMessage, "unknown", true, error);
+  }
+
+  private async cleanupDebateMessages(
+    messageIds: number[],
+    traceCtx: Record<string, unknown>
+  ): Promise<void> {
+    if (messageIds.length === 0) return;
+
+    try {
+      await this.messageRepo.delete(messageIds);
+      logger.debug("[chat.processDebateMessage] debate_cleanup_completed", {
+        ...traceCtx,
+        deletedMessageIds: messageIds,
+      });
+    } catch (cleanupError) {
+      logger.error("[chat.processDebateMessage] debate_cleanup_failed", {
+        ...traceCtx,
+        deletedMessageIds: messageIds,
+        error: serializeError(cleanupError),
+      });
+    }
   }
 
   private async getConversation(conversationId: string, userId: string) {
@@ -464,7 +487,8 @@ export class ChatService {
     conversationId: string,
     userId: string,
     userText: string,
-    trace?: RequestTraceContext
+    trace?: RequestTraceContext,
+    callbacks?: DebateProgressCallbacks
   ): Promise<DebateTurnResult> {
     const traceCtx = createTraceContext(trace, {
       conversationId,
@@ -477,6 +501,7 @@ export class ChatService {
       userTextLength: userText.length,
     });
 
+    // 1. Validate conversation and debate config
     const conversation = await this.getConversation(conversationId, userId);
 
     if (!conversation.secondaryCharacterId || !conversation.secondaryCharacter) {
@@ -492,9 +517,43 @@ export class ChatService {
     const speakerB = conversation.secondaryCharacter;
     const baseHistory = await this.loadConversationHistory(conversationId);
 
-    let responseA: string;
-    let responseB: string;
+    // Track persisted message IDs for compensating cleanup on failure
+    const persistedMessageIds: number[] = [];
 
+    // 2. Persist user message early
+    const userMessage = await this.dataSource.transaction(async (manager) => {
+      return manager.save(Message, {
+        conversationId,
+        role: "user",
+        content: userText,
+      });
+    });
+    persistedMessageIds.push(userMessage.id);
+
+    logger.debug("[chat.processDebateMessage] debate_user_persisted", {
+      ...traceCtx,
+      userMessageId: userMessage.id,
+    });
+
+    callbacks?.onUserMessagePersisted({
+      userMessageId: userMessage.id,
+      userText,
+    });
+
+    // 3. Generate & persist Speaker A
+    callbacks?.onTyping({
+      speakerId: speakerA.id,
+      speakerName: speakerA.name,
+      turnOrder: "A",
+    });
+
+    logger.debug("[chat.processDebateMessage] debate_typing_emitted", {
+      ...traceCtx,
+      speakerId: speakerA.id,
+      phase: "typing_A",
+    });
+
+    let responseA: string;
     try {
       const aiResponseA = await this.generateAiResponse({
         conversationId,
@@ -511,14 +570,83 @@ export class ChatService {
       });
       responseA = aiResponseA.text;
     } catch (error) {
+      await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta del personaje A");
     }
+
+    logger.debug("[chat.processDebateMessage] debate_speaker_a_generated", {
+      ...traceCtx,
+      speakerId: speakerA.id,
+      responseLength: responseA.length,
+    });
+
+    let speakerAMessage: Message;
+    try {
+      speakerAMessage = await this.dataSource.transaction(async (manager) => {
+        return manager.save(Message, {
+          conversationId,
+          role: "assistant",
+          content: responseA,
+          speakerCharacterId: speakerA.id,
+        });
+      });
+      persistedMessageIds.push(speakerAMessage.id);
+    } catch (error) {
+      await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
+      throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo persistir respuesta del personaje A");
+    }
+
+    // TTS for A
+    const turnResultA: DebateTurnCharacterResult = {
+      messageId: speakerAMessage.id,
+      text: responseA,
+      speakerId: speakerA.id,
+      speakerName: speakerA.name,
+    };
+
+    if (env.DEBATE_TTS_ENABLED) {
+      const audioA = await this.synthesizeAndUpload(
+        responseA,
+        speakerA.voiceId,
+        speakerAMessage.id,
+        userId,
+        conversationId,
+        { ...traceCtx, speaker: "A", speakerId: speakerA.id }
+      );
+      if ("audioBase64" in audioA) {
+        turnResultA.audioBase64 = audioA.audioBase64;
+      } else {
+        turnResultA.warning = audioA.warning;
+      }
+    }
+
+    logger.debug("[chat.processDebateMessage] debate_speaker_a_emitted", {
+      ...traceCtx,
+      messageId: speakerAMessage.id,
+      speakerId: speakerA.id,
+    });
+
+    callbacks?.onTurnReady({ ...turnResultA, turnOrder: "A" });
+
+    // 4. Generate & persist Speaker B
+    callbacks?.onTyping({
+      speakerId: speakerB.id,
+      speakerName: speakerB.name,
+      turnOrder: "B",
+    });
+
+    logger.debug("[chat.processDebateMessage] debate_typing_emitted", {
+      ...traceCtx,
+      speakerId: speakerB.id,
+      phase: "typing_B",
+    });
 
     const historyForSpeakerB: Array<Pick<Message, "role" | "content">> = [
       ...baseHistory,
       { role: "assistant", content: responseA },
     ];
 
+    let responseB: string;
     try {
       const aiResponseB = await this.generateAiResponse({
         conversationId,
@@ -535,95 +663,83 @@ export class ChatService {
       });
       responseB = aiResponseB.text;
     } catch (error) {
+      await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
       throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta del personaje B");
     }
 
-    const persisted = await this.dataSource.transaction(async (manager) => {
-      const userMessage = await manager.save(Message, {
-        conversationId,
-        role: "user",
-        content: userText,
-      });
-
-      const speakerAMessage = await manager.save(Message, {
-        conversationId,
-        role: "assistant",
-        content: responseA,
-        speakerCharacterId: speakerA.id,
-      });
-
-      const speakerBMessage = await manager.save(Message, {
-        conversationId,
-        role: "assistant",
-        content: responseB,
-        speakerCharacterId: speakerB.id,
-      });
-
-      return {
-        userMessage,
-        speakerAMessage,
-        speakerBMessage,
-      };
+    logger.debug("[chat.processDebateMessage] debate_speaker_b_generated", {
+      ...traceCtx,
+      speakerId: speakerB.id,
+      responseLength: responseB.length,
     });
 
-    const responses: DebateTurnCharacterResult[] = [
-      {
-        messageId: persisted.speakerAMessage.id,
-        text: responseA,
-        speakerId: speakerA.id,
-        speakerName: speakerA.name,
-      },
-      {
-        messageId: persisted.speakerBMessage.id,
-        text: responseB,
-        speakerId: speakerB.id,
-        speakerName: speakerB.name,
-      },
-    ];
+    let speakerBMessage: Message;
+    try {
+      speakerBMessage = await this.dataSource.transaction(async (manager) => {
+        return manager.save(Message, {
+          conversationId,
+          role: "assistant",
+          content: responseB,
+          speakerCharacterId: speakerB.id,
+        });
+      });
+    } catch (error) {
+      await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
+      throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo persistir respuesta del personaje B");
+    }
+
+    // TTS for B
+    const turnResultB: DebateTurnCharacterResult = {
+      messageId: speakerBMessage.id,
+      text: responseB,
+      speakerId: speakerB.id,
+      speakerName: speakerB.name,
+    };
 
     if (env.DEBATE_TTS_ENABLED) {
-      const [audioA, audioB] = await Promise.all([
-        this.synthesizeAndUpload(
-          responseA,
-          speakerA.voiceId,
-          persisted.speakerAMessage.id,
-          userId,
-          conversationId,
-          { ...traceCtx, speaker: "A", speakerId: speakerA.id }
-        ),
-        this.synthesizeAndUpload(
-          responseB,
-          speakerB.voiceId,
-          persisted.speakerBMessage.id,
-          userId,
-          conversationId,
-          { ...traceCtx, speaker: "B", speakerId: speakerB.id }
-        ),
-      ]);
-
-      if ("audioBase64" in audioA) {
-        responses[0].audioBase64 = audioA.audioBase64;
-      } else {
-        responses[0].warning = audioA.warning;
-      }
-
+      const audioB = await this.synthesizeAndUpload(
+        responseB,
+        speakerB.voiceId,
+        speakerBMessage.id,
+        userId,
+        conversationId,
+        { ...traceCtx, speaker: "B", speakerId: speakerB.id }
+      );
       if ("audioBase64" in audioB) {
-        responses[1].audioBase64 = audioB.audioBase64;
+        turnResultB.audioBase64 = audioB.audioBase64;
       } else {
-        responses[1].warning = audioB.warning;
+        turnResultB.warning = audioB.warning;
       }
     }
 
-    logger.debug("[chat.processDebateMessage] completed", {
+    logger.debug("[chat.processDebateMessage] debate_speaker_b_emitted", {
       ...traceCtx,
-      userMessageId: persisted.userMessage.id,
+      messageId: speakerBMessage.id,
+      speakerId: speakerB.id,
+    });
+
+    callbacks?.onTurnReady({ ...turnResultB, turnOrder: "B" });
+
+    // 5. Round complete
+    const responses = [turnResultA, turnResultB];
+    const warnings: DebateWarningPayload[] = responses
+      .map((r) => r.warning)
+      .filter((w): w is DebateWarningPayload => w != null);
+
+    callbacks?.onRoundCompleted({
+      warnings: warnings.length > 0 ? warnings : undefined,
+    });
+
+    logger.debug("[chat.processDebateMessage] debate_round_completed", {
+      ...traceCtx,
+      userMessageId: userMessage.id,
       responseCount: responses.length,
       speakerAId: speakerA.id,
       speakerBId: speakerB.id,
     });
 
     return {
-      userMessageId: persisted.userMessage.id,
+      userMessageId: userMessage.id,
       userText,
       responses,
     };
