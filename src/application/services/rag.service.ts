@@ -8,7 +8,7 @@ export class RagService {
 private readonly ragRepository: ChromaRepository) {}
 
   async execute(dto: RAGQueryDTO): Promise<RAGResponseDTO> {
-    const { query, characterId, topK = 3 } = dto;
+    const { query, characterId } = dto;
 
     if (!query?.trim()) {
       return { context: "" };

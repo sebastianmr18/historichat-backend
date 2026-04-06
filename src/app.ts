@@ -19,7 +19,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'OK', uptime: process.uptime() });
 });
 
@@ -30,8 +30,8 @@ protectedApiRouter.use('/', apiRoutes);
 
 app.use('/api', protectedApiRouter);
 
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('🔥 Error Crítico:', err);
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Error Crítico:', err);
   res.status(500).json({
     error: 'Internal Server Error',
     message: env.NODE_ENV === 'development' ? err.message : undefined

@@ -13,7 +13,6 @@ import {
   DebateTurnResultPayload,
   DebateTypingPayload,
   DebateUserAckPayload,
-  DebateWarningPayload,
   LegacyConversationMode,
 } from "../../shared/types.js";
 import { wsAuthMiddleware } from "./ws-auth.middleware.js";
