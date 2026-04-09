@@ -16,6 +16,7 @@ describe("interview mode prompts", () => {
 
     expect(prompt).toContain("Actua como Ada");
     expect(prompt).toContain("Rol: Scientist");
+    expect(prompt).toContain("entre 50 y 75 palabras");
     expect(prompt).not.toContain("Estas en modo entrevista.");
   });
 

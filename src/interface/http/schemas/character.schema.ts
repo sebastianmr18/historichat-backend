@@ -26,6 +26,8 @@ export const createCharacterSchema = z.object({
   quote: z.string().optional(),
   imageUrl: z.string().optional(),
   backgroundImageUrl: z.string().optional(),
+  ambientLabel: z.string().optional(),
+  contentVariant: z.string().optional(),
   badge: z.enum(["popular", "new"]).optional(),
   topics: z.array(z.string()).default([]),
   isPublic: z.boolean().default(false),
