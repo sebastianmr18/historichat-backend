@@ -1,4 +1,5 @@
 import { Character } from "../../../infrastructure/database/entities/Character.js";
+import { CharacterGalleryImage } from "../../../infrastructure/database/entities/CharacterGalleryImage.js";
 import { IStorageService } from "../../../shared/types.js";
 import { logger } from "../../../infrastructure/logging/logger.js";
 
@@ -14,30 +15,27 @@ function getImagePathCandidates(imagePath: string): string[] {
   return [...new Set([raw, withoutLeadingSlash, withoutBucketPrefix].filter(Boolean))];
 }
 
-async function signImagePath(
+async function signStoragePath(
   storage: IStorageService,
-  character: Character,
-  field: "imageUrl" | "backgroundImageUrl",
+  pathValue: string | null | undefined,
   expiresInSeconds: number,
+  logContext: Record<string, unknown>,
 ): Promise<string | null> {
-  const imagePath = character[field];
-
-  if (!imagePath) {
+  if (!pathValue) {
     return null;
   }
 
-  const pathCandidates = getImagePathCandidates(imagePath);
+  const pathCandidates = getImagePathCandidates(pathValue);
   const errors: string[] = [];
 
   for (const pathCandidate of pathCandidates) {
     try {
       const signedUrl = await storage.getSignedUrl(IMAGE_BUCKET, pathCandidate, expiresInSeconds);
 
-      if (pathCandidate !== imagePath) {
+      if (pathCandidate !== pathValue) {
         logger.warn("[character.presenter] signed_with_normalized_path", {
-          characterId: character.id,
-          field,
-          originalImagePath: imagePath,
+          ...logContext,
+          originalImagePath: pathValue,
           normalizedImagePath: pathCandidate,
         });
       }
@@ -49,14 +47,25 @@ async function signImagePath(
   }
 
   logger.warn("[character.presenter] signing_failed", {
-    characterId: character.id,
-    field,
-    imagePath,
+    ...logContext,
+    imagePath: pathValue,
     triedPathCandidates: pathCandidates,
     errors,
   });
 
   return null;
+}
+
+async function signImagePath(
+  storage: IStorageService,
+  character: Character,
+  field: "imageUrl" | "backgroundImageUrl",
+  expiresInSeconds: number,
+): Promise<string | null> {
+  return signStoragePath(storage, character[field], expiresInSeconds, {
+    characterId: character.id,
+    field,
+  });
 }
 
 export async function withSignedImageUrls(
@@ -80,4 +89,21 @@ export async function withSignedImageUrlsBatch(
   expiresInSeconds: number,
 ) {
   return Promise.all(characters.map((c) => withSignedImageUrls(storage, c, expiresInSeconds)));
+}
+
+export async function withSignedGalleryImageUrls(
+  storage: IStorageService,
+  galleryImages: CharacterGalleryImage[],
+  expiresInSeconds: number,
+) {
+  return Promise.all(
+    galleryImages.map(async (galleryImage) => ({
+      ...galleryImage,
+      imageUrl: await signStoragePath(storage, galleryImage.imageUrl, expiresInSeconds, {
+        galleryImageId: galleryImage.id,
+        characterId: galleryImage.characterId,
+        field: "imageUrl",
+      }),
+    })),
+  );
 }

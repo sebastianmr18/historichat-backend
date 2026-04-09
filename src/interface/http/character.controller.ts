@@ -17,7 +17,7 @@ import { extractUserId } from "../../api/auth.middleware.js";
 import { serializeError } from "../../shared/errors.js";
 import { IStorageService } from "../../shared/types.js";
 import { createCharacterSchema } from "./schemas/character.schema.js";
-import { withSignedImageUrls, withSignedImageUrlsBatch } from "./presenters/character.presenter.js";
+import { withSignedGalleryImageUrls, withSignedImageUrls, withSignedImageUrlsBatch } from "./presenters/character.presenter.js";
 
 interface ResolvedUiCopy {
   copyKey: string;
@@ -54,6 +54,19 @@ type SignedCharacterPayloadSource = Pick<
 > & {
   imageUrl: string | null;
   backgroundImageUrl: string | null;
+};
+
+type SignedGalleryImagePayloadSource = Pick<
+  CharacterGalleryImage,
+  | "id"
+  | "alt"
+  | "caption"
+  | "credit"
+  | "sourceUrl"
+  | "sortOrder"
+  | "isCover"
+> & {
+  imageUrl: string | null;
 };
 
 export class CharacterController {
@@ -222,7 +235,7 @@ export class CharacterController {
       }));
   }
 
-  private mapGalleryImages(galleryImages: CharacterGalleryImage[]) {
+  private mapGalleryImages(galleryImages: SignedGalleryImagePayloadSource[]) {
     return [...galleryImages]
       .sort((a, b) => this.compareBySortOrder(a, b))
       .map((galleryImage) => ({
@@ -342,7 +355,7 @@ export class CharacterController {
         return res.status(404).json({ error: "Personaje no encontrado" });
       }
 
-      const [quotes, facts, contextCards, timelineEntries, relationships, prompts, galleryImages, editorialBlocks, signedCharacter, uiCopies] = await Promise.all([
+      const [quotes, facts, contextCards, timelineEntries, relationships, prompts, signedGalleryImages, editorialBlocks, signedCharacter, uiCopies] = await Promise.all([
         this.quoteRepo.find({ where: { characterId: character.id }, order: { sortOrder: "ASC" } }),
         this.factRepo.find({ where: { characterId: character.id }, order: { sortOrder: "ASC" } }),
         this.contextCardRepo.find({ where: { characterId: character.id }, order: { pageKey: "ASC", sortOrder: "ASC" } }),
@@ -356,7 +369,9 @@ export class CharacterController {
           order: { sortOrder: "ASC" },
         }),
         this.promptRepo.find({ where: { characterId: character.id }, order: { sortOrder: "ASC" } }),
-        this.galleryImageRepo.find({ where: { characterId: character.id }, order: { sortOrder: "ASC" } }),
+        this.galleryImageRepo.find({ where: { characterId: character.id }, order: { sortOrder: "ASC" } }).then((galleryImages) =>
+          withSignedGalleryImageUrls(this.storage, galleryImages, env.SIGNED_URL_EXPIRES_SECONDS),
+        ),
         this.editorialBlockRepo.find({ where: { characterId: character.id }, order: { pageKey: "ASC", sortOrder: "ASC" } }),
         withSignedImageUrls(this.storage, character, env.SIGNED_URL_EXPIRES_SECONDS),
         this.getResolvedUiCopiesForCharacter(character),
@@ -371,7 +386,7 @@ export class CharacterController {
           timelineEntries: this.mapTimelineEntries(timelineEntries, relationships),
           relationships: this.mapRelationships(relationships),
           prompts: this.mapPrompts(prompts),
-          galleryImages: this.mapGalleryImages(galleryImages),
+          galleryImages: this.mapGalleryImages(signedGalleryImages),
           editorialBlocks: this.mapEditorialBlocks(editorialBlocks),
           uiCopies,
         },
@@ -513,7 +528,9 @@ export class CharacterController {
       }
 
       const [galleryImages, uiCopies] = await Promise.all([
-        this.galleryImageRepo.find({ where: { characterId: character.id }, order: { sortOrder: "ASC" } }),
+        this.galleryImageRepo.find({ where: { characterId: character.id }, order: { sortOrder: "ASC" } }).then((results) =>
+          withSignedGalleryImageUrls(this.storage, results, env.SIGNED_URL_EXPIRES_SECONDS),
+        ),
         this.getResolvedUiCopiesForCharacter(character),
       ]);
 
