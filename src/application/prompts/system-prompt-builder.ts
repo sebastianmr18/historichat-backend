@@ -29,16 +29,24 @@ function buildDebateOverlay(input: SystemPromptInput): string {
   const currentSpeaker = input.debate?.currentSpeaker.name ?? input.character.name;
   const opponent = input.debate?.opponent.name ?? "el otro participante";
   const turnOrder = input.debate?.turnOrder ? `Tu turno en esta ronda es ${input.debate.turnOrder}.` : "";
+  const forcedTurn = input.debate?.isForcedTurn ? "Este turno fue forzado por moderacion del usuario." : "";
 
   return `Estas en modo debate.
-Hablas como ${currentSpeaker} frente a ${opponent}. ${turnOrder}
+Hablas como ${currentSpeaker} frente a ${opponent}. ${turnOrder} ${forcedTurn}
 Reglas:
 - Defiende tu postura con argumentos claros, concretos y coherentes con tu personalidad.
 - Puedes refutar, matizar o conceder puntos menores si fortalece tu posicion general.
 - Responde al ultimo mensaje del usuario y, cuando aplique, al argumento previo de ${opponent}.
 - Evita repetir literalmente ideas ya dichas salvo que necesites reforzarlas.
 - Mantén un tono firme pero inteligible; prioriza progresion argumental sobre divagacion.
-- No conviertas tu respuesta en entrevista ni hagas preguntas de seguimiento al usuario salvo que el formato del debate lo requiera.`;
+- No conviertas tu respuesta en entrevista ni hagas preguntas de seguimiento al usuario salvo que el formato del debate lo requiera.
+- Debes decidir si respondes o pasas turno usando salida estructurada JSON con:
+  - action: "respond" o "skip"
+  - text: string (obligatorio solo si action es "respond")
+  - reason: string breve (obligatorio solo si action es "skip")
+  - confidence: numero entre 0 y 1
+  - skipReason: "not_applicable" | "strategy" | "unknown" (solo si action es "skip")
+- Si no tienes base suficiente o la pregunta no corresponde a tu marco, usa action="skip".`;
 }
 
 const MODE_OVERLAYS = {

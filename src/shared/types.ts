@@ -53,11 +53,37 @@ export interface DebateWarningPayload {
   retryable: boolean;
 }
 
-export interface DebateTurnCharacterResult {
-  messageId: number;
+export type DebateTurnOrder = "A" | "B" | "forced";
+
+export type DebateSkipReason =
+  | "manual_user"
+  | "auto_low_confidence"
+  | "not_applicable"
+  | "strategy"
+  | "unknown";
+
+export interface SendDebateTextPayload {
+  conversationId: string;
   text: string;
+  forced_speaker_id?: string | null;
+}
+
+export interface SkipDebateTurnPayload {
+  conversationId: string;
+  speaker_id: string;
+  reason?: string;
+}
+
+export interface DebateTurnCharacterResult {
+  messageId?: number;
+  text?: string;
   speakerId: string;
   speakerName: string;
+  skipped?: boolean;
+  skipReason?: DebateSkipReason;
+  skipReasonDetail?: string;
+  confidence?: number;
+  isForced?: boolean;
   audioBase64?: string;
   warning?: DebateWarningPayload;
 }
@@ -66,6 +92,9 @@ export interface DebateTurnResult {
   userMessageId: number;
   userText: string;
   responses: DebateTurnCharacterResult[];
+  responsesCount: number;
+  skipsCount: number;
+  nextSpeakerId?: string;
 }
 
 // --- Granular debate event payloads ---
@@ -82,7 +111,8 @@ export interface DebateTypingPayload {
   traceId: string;
   speakerId: string;
   speakerName: string;
-  turnOrder: "A" | "B";
+  turnOrder: DebateTurnOrder;
+  isForced?: boolean;
 }
 
 export interface DebateTurnPayload {
@@ -92,14 +122,30 @@ export interface DebateTurnPayload {
   text: string;
   speakerId: string;
   speakerName: string;
-  turnOrder: "A" | "B";
+  turnOrder: DebateTurnOrder;
+  isForced?: boolean;
   audio?: string;
   warning?: DebateWarningPayload;
+}
+
+export interface DebateTurnSkippedPayload {
+  conversationId: string;
+  traceId: string;
+  speakerId: string;
+  speakerName: string;
+  turnOrder: DebateTurnOrder;
+  reason: DebateSkipReason;
+  reasonDetail?: string;
+  confidence?: number;
+  isForced?: boolean;
 }
 
 export interface DebateRoundCompletePayload {
   conversationId: string;
   traceId: string;
+  responsesCount: number;
+  skipsCount: number;
+  nextSpeakerId?: string;
   warnings?: DebateWarningPayload[];
 }
 
@@ -129,8 +175,23 @@ export interface DebateProgressCallbacks {
   onTyping(payload: {
     speakerId: string;
     speakerName: string;
-    turnOrder: "A" | "B";
+    turnOrder: DebateTurnOrder;
+    isForced?: boolean;
   }): void;
-  onTurnReady(payload: DebateTurnCharacterResult & { turnOrder: "A" | "B" }): void;
-  onRoundCompleted(payload: { warnings?: DebateWarningPayload[] }): void;
+  onTurnReady(payload: DebateTurnCharacterResult & { turnOrder: DebateTurnOrder }): void;
+  onTurnSkipped(payload: {
+    speakerId: string;
+    speakerName: string;
+    turnOrder: DebateTurnOrder;
+    reason: DebateSkipReason;
+    reasonDetail?: string;
+    confidence?: number;
+    isForced?: boolean;
+  }): void;
+  onRoundCompleted(payload: {
+    warnings?: DebateWarningPayload[];
+    responsesCount: number;
+    skipsCount: number;
+    nextSpeakerId?: string;
+  }): void;
 }

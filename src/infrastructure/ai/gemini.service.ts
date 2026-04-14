@@ -1,13 +1,19 @@
 import { GoogleGenerativeAI, Content, Part } from "@google/generative-ai";
 import { env } from "../../config/env.js";
-import { Message } from "../database/entities/Message.js";
 import { logger } from "../logging/logger.js";
+import {
+  LlmGenerateResponse,
+  LlmHistoryMessage,
+  LlmProvider,
+  LlmProviderError,
+} from "./llm-provider.interface.js";
 
-export class GeminiService {
+export class GeminiService implements LlmProvider {
+  public readonly providerName = "gemini";
   private genAI: GoogleGenerativeAI;
   private model: ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
   private modelWithSchema: (schema: unknown) => ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
-  private modelName: string;
+  public readonly modelName: string;
 
   constructor() {
     this.genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
@@ -27,11 +33,11 @@ export class GeminiService {
 
   async generateResponse(
     systemPrompt: string,
-    history: Message[],
+    history: LlmHistoryMessage[],
     userQuery: string,
     contextRAG?: string,
     responseSchema?: unknown
-  ): Promise<{ text: string; structuredOutput?: unknown }> {
+  ): Promise<LlmGenerateResponse> {
     try {
       // 1. Formatear historial para el SDK de Google
       let chatHistory: Content[] = history.map(msg => ({
@@ -74,17 +80,33 @@ export class GeminiService {
       if (responseSchema) {
         try {
           const structuredOutput = JSON.parse(responseText);
-          return { text: responseText, structuredOutput };
+          return {
+            text: responseText,
+            structuredOutput,
+            provider: this.providerName,
+            model: this.modelName,
+          };
         } catch (parseError) {
           logger.warn("[gemini] failed to parse structured output, returning raw text", { error: parseError });
-          return { text: responseText };
+          return {
+            text: responseText,
+            provider: this.providerName,
+            model: this.modelName,
+          };
         }
       }
 
-      return { text: responseText };
+      return {
+        text: responseText,
+        provider: this.providerName,
+        model: this.modelName,
+      };
     } catch (error) {
       logger.error("[gemini] generateResponse failed", { error });
-      throw new Error("Error al generar respuesta con el LLM.");
+      throw new LlmProviderError(this.providerName, this.modelName, "Error al generar respuesta con el LLM.", {
+        cause: error,
+        retryable: true,
+      });
     }
   }
 }

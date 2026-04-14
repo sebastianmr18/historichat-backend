@@ -8,7 +8,11 @@ import { ChatFlowError } from "../../../domain/errors/chat-flow.error.js";
 
 function createMockGemini() {
   return {
-    generateResponse: vi.fn().mockResolvedValue({ text: "AI response text" }),
+    generateResponse: vi.fn().mockResolvedValue({
+      text: "AI response text",
+      provider: "gemini",
+      model: "gemini-test",
+    }),
   };
 }
 
@@ -106,6 +110,7 @@ vi.mock("../../../config/env.js", () => ({
   env: {
     SUPABASE_STORAGE_BUCKET: "test-bucket",
     DEBATE_TTS_ENABLED: true,
+    DEBATE_SKIP_CONFIDENCE_THRESHOLD: 0.35,
   },
 }));
 
@@ -167,6 +172,37 @@ describe("ChatService", () => {
       expect(result.speakerName).toBe("Character A");
       expect(result.audioBase64).toBeDefined();
       expect(result.messageId).toBeDefined();
+    });
+
+    it("unwraps JSON envelope and keeps only conversational text", async () => {
+      mockGemini.generateResponse.mockResolvedValueOnce({
+        text: JSON.stringify({
+          action: "respond",
+          text: "Texto limpio para el usuario",
+          confidence: 1,
+        }),
+        provider: "openrouter",
+        model: "openrouter-test",
+      });
+
+      const result = await service.processTextMessage("conv-1", "user-1", "Hello");
+
+      expect(result.text).toBe("Texto limpio para el usuario");
+      expect(mockTransactionSave).toHaveBeenCalledWith(
+        expect.objectContaining({ role: "assistant", content: "Texto limpio para el usuario" })
+      );
+    });
+
+    it("throws ChatFlowError when the assistant output is code-like", async () => {
+      mockGemini.generateResponse.mockResolvedValueOnce({
+        text: "```ts\nconst x = 1;\n```",
+        provider: "openrouter",
+        model: "openrouter-test",
+      });
+
+      await expect(
+        service.processTextMessage("conv-1", "user-1", "Hello")
+      ).rejects.toMatchObject({ code: "AI_RESPONSE_FAILED" });
     });
 
     it("throws ChatFlowError when conversation is not found", async () => {
@@ -308,8 +344,8 @@ describe("ChatService", () => {
 
     it("generates responses from both characters", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce({ text: "Response from A" })
-        .mockResolvedValueOnce({ text: "Response from B" });
+        .mockResolvedValueOnce({ text: "Response from A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "Response from B", provider: "gemini", model: "gemini-test" });
 
       const result = await service.processDebateMessage("conv-debate", "user-1", "Discuss ethics");
 
@@ -337,8 +373,8 @@ describe("ChatService", () => {
 
     it("calls generateAiResponse for speaker B with speaker A's response in history", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce({ text: "A says hello" })
-        .mockResolvedValueOnce({ text: "B replies" });
+        .mockResolvedValueOnce({ text: "A says hello", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B replies", provider: "gemini", model: "gemini-test" });
 
       await service.processDebateMessage("conv-debate", "user-1", "Start");
 
@@ -356,8 +392,8 @@ describe("ChatService", () => {
 
     it("synthesizes audio for both speakers when DEBATE_TTS_ENABLED", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce({ text: "A speaks" })
-        .mockResolvedValueOnce({ text: "B speaks" });
+        .mockResolvedValueOnce({ text: "A speaks", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B speaks", provider: "gemini", model: "gemini-test" });
 
       const result = await service.processDebateMessage("conv-debate", "user-1", "Debate!");
 
@@ -368,13 +404,14 @@ describe("ChatService", () => {
 
     it("invokes onUserMessagePersisted callback after persisting user message", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce({ text: "A" })
-        .mockResolvedValueOnce({ text: "B" });
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" });
 
       const callbacks = {
         onUserMessagePersisted: vi.fn(),
         onTyping: vi.fn(),
         onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
         onRoundCompleted: vi.fn(),
       };
 
@@ -389,14 +426,15 @@ describe("ChatService", () => {
 
     it("invokes onTyping for A before onTurnReady for A, and onTyping for B before onTurnReady for B", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce({ text: "A response" })
-        .mockResolvedValueOnce({ text: "B response" });
+        .mockResolvedValueOnce({ text: "A response", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B response", provider: "gemini", model: "gemini-test" });
 
       const callOrder: string[] = [];
       const callbacks = {
         onUserMessagePersisted: vi.fn(() => callOrder.push("userAck")),
         onTyping: vi.fn((p: any) => callOrder.push(`typing_${p.turnOrder}`)),
         onTurnReady: vi.fn((p: any) => callOrder.push(`turn_${p.turnOrder}`)),
+        onTurnSkipped: vi.fn((p: any) => callOrder.push(`skip_${p.turnOrder}`)),
         onRoundCompleted: vi.fn(() => callOrder.push("roundComplete")),
       };
 
@@ -414,13 +452,14 @@ describe("ChatService", () => {
 
     it("includes turnOrder in onTurnReady callbacks", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce({ text: "A" })
-        .mockResolvedValueOnce({ text: "B" });
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" });
 
       const callbacks = {
         onUserMessagePersisted: vi.fn(),
         onTyping: vi.fn(),
         onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
         onRoundCompleted: vi.fn(),
       };
 
@@ -439,8 +478,8 @@ describe("ChatService", () => {
 
     it("attaches TTS warning in onTurnReady when TTS fails for a speaker", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce({ text: "A with audio" })
-        .mockResolvedValueOnce({ text: "B no audio" });
+        .mockResolvedValueOnce({ text: "A with audio", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B no audio", provider: "gemini", model: "gemini-test" });
 
       mockVoice.synthesize
         .mockResolvedValueOnce(Buffer.from("audio-a"))
@@ -450,6 +489,7 @@ describe("ChatService", () => {
         onUserMessagePersisted: vi.fn(),
         onTyping: vi.fn(),
         onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
         onRoundCompleted: vi.fn(),
       };
 
@@ -485,6 +525,7 @@ describe("ChatService", () => {
         onUserMessagePersisted: vi.fn(),
         onTyping: vi.fn(),
         onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
         onRoundCompleted: vi.fn(),
       };
 
@@ -495,13 +536,14 @@ describe("ChatService", () => {
       expect(callbacks.onUserMessagePersisted).not.toHaveBeenCalled();
       expect(callbacks.onTyping).not.toHaveBeenCalled();
       expect(callbacks.onTurnReady).not.toHaveBeenCalled();
+      expect(callbacks.onTurnSkipped).not.toHaveBeenCalled();
       expect(callbacks.onRoundCompleted).not.toHaveBeenCalled();
     });
 
     it("works correctly without callbacks (backward compatible)", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce({ text: "A" })
-        .mockResolvedValueOnce({ text: "B" });
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" });
 
       const result = await service.processDebateMessage("conv-debate", "user-1", "No callbacks");
 
@@ -524,13 +566,14 @@ describe("ChatService", () => {
 
     it("cleans up persisted messages when Speaker B generation fails after A succeeded", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce({ text: "A ok" })
+        .mockResolvedValueOnce({ text: "A ok", provider: "gemini", model: "gemini-test" })
         .mockRejectedValueOnce(new Error("LLM down for B"));
 
       const callbacks = {
         onUserMessagePersisted: vi.fn(),
         onTyping: vi.fn(),
         onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
         onRoundCompleted: vi.fn(),
       };
 

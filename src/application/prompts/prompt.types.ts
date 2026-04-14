@@ -11,7 +11,9 @@ export interface PromptCharacterSummary {
 export interface PromptDebateContext {
   currentSpeaker: PromptCharacterSummary;
   opponent: PromptCharacterSummary;
-  turnOrder?: "A" | "B";
+  turnOrder?: "A" | "B" | "forced";
+  isForcedTurn?: boolean;
+  allowSkip?: boolean;
 }
 
 export interface SystemPromptInput {

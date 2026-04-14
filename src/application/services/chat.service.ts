@@ -1,12 +1,14 @@
 import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
-import { GeminiService } from "../../infrastructure/ai/gemini.service.js";
+import type { LlmProvider } from "../../infrastructure/ai/llm-provider.interface.js";
 import {
   ChatResponse,
   ConversationMode,
+  DebateSkipReason,
   DebateProgressCallbacks,
   DebateTurnCharacterResult,
+  DebateTurnOrder,
   DebateTurnResult,
   DebateWarningPayload,
   IStorageService,
@@ -25,13 +27,35 @@ import { suggestionsSchema } from "../prompts/suggestions-prompt.js";
 import { PromptDebateContext } from "../prompts/prompt.types.js";
 import { buildModeSystemPrompt } from "../prompts/system-prompt-builder.js";
 import { buildModeSuggestionsPrompt } from "../prompts/suggestions-prompt-builder.js";
+import { debateTurnSchema } from "../prompts/debate-turn.schema.js";
 import type { ChatFlowErrorCode } from "../../domain/errors/chat-flow.error.js";
 import { ChatFlowError } from "../../domain/errors/chat-flow.error.js";
 import type { IRepository, IDataSource } from "../../domain/repositories/repository.interfaces.js";
+import { sanitizeAssistantOutput } from "../../shared/llm-output-sanitizer.js";
+
+interface DebateDecisionOutput {
+  action: "respond" | "skip";
+  text?: string;
+  reason?: string;
+  confidence: number;
+  skipReason?: DebateSkipReason;
+}
+
+interface DebateProcessOptions {
+  forcedSpeakerId?: string | null;
+  manualSkips?: Record<string, string | undefined>;
+}
+
+interface DebateSpeakerPlan {
+  speaker: Character;
+  opponent: Character;
+  turnOrder: DebateTurnOrder;
+  isForced: boolean;
+}
 
 export class ChatService {
   constructor(
-    private gemini: GeminiService,
+    private llm: LlmProvider,
     private voice: ITextToSpeech & ISpeechToText,
     private vectorStore: ChromaRepository,
     private storageService: IStorageService,
@@ -200,14 +224,17 @@ export class ChatService {
     logger.debug("[context]", { context });
 
     // Generate main AI response
-    const aiResponse = await this.gemini.generateResponse(
+    const aiResponse = await this.llm.generateResponse(
       systemPrompt,
       history as any,
       params.userText,
       context
     );
 
-    const aiResponseText = aiResponse.text;
+    const aiResponseText = sanitizeAssistantOutput(aiResponse.text, {
+      allowJsonEnvelope: true,
+      rejectCodeLikeContent: true,
+    });
 
     // Generate suggestions in parallel (graceful degradation if it fails)
     let suggestions: string[] | undefined;
@@ -219,7 +246,7 @@ export class ChatService {
           characterName: params.characterName ?? params.character.name,
           debate: params.debate,
         });
-        const suggestionsResponse = await this.gemini.generateResponse(
+        const suggestionsResponse = await this.llm.generateResponse(
           "You are a helpful assistant that generates follow-up suggestions.",
           [],
           suggestionsPrompt,
@@ -229,7 +256,13 @@ export class ChatService {
 
         if (suggestionsResponse.structuredOutput) {
           const parsed = suggestionsResponse.structuredOutput as { suggestions?: string[] };
-          suggestions = parsed.suggestions?.filter(s => typeof s === 'string' && s.length > 0);
+          suggestions = parsed.suggestions
+            ?.filter((s) => typeof s === "string" && s.length > 0)
+            .map((s) => sanitizeAssistantOutput(s, {
+              allowJsonEnvelope: false,
+              rejectCodeLikeContent: true,
+            }))
+            .slice(0, 3);
         }
       } catch (error) {
         logger.warn("[chat.generateAiResponse] suggestions generation failed, proceeding without", {
@@ -243,6 +276,97 @@ export class ChatService {
       text: aiResponseText,
       suggestions,
     };
+  }
+
+  private normalizeDebateDecision(raw: unknown): DebateDecisionOutput | null {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+
+    const payload = raw as Record<string, unknown>;
+    const action = payload.action === "skip" ? "skip" : payload.action === "respond" ? "respond" : null;
+    if (!action) {
+      return null;
+    }
+
+    const confidenceRaw = payload.confidence;
+    const confidence = typeof confidenceRaw === "number" && Number.isFinite(confidenceRaw)
+      ? Math.max(0, Math.min(1, confidenceRaw))
+      : 0.5;
+
+    const text = typeof payload.text === "string" ? payload.text.trim() : undefined;
+    const reason = typeof payload.reason === "string" ? payload.reason.trim() : undefined;
+    const skipReasonRaw = typeof payload.skipReason === "string" ? payload.skipReason : undefined;
+    const skipReason: DebateSkipReason | undefined =
+      skipReasonRaw === "manual_user" ||
+      skipReasonRaw === "auto_low_confidence" ||
+      skipReasonRaw === "not_applicable" ||
+      skipReasonRaw === "strategy" ||
+      skipReasonRaw === "unknown"
+        ? skipReasonRaw
+        : undefined;
+
+    if (action === "respond" && !text) {
+      return null;
+    }
+
+    return {
+      action,
+      text,
+      reason,
+      confidence,
+      skipReason,
+    };
+  }
+
+  private resolveDebatePlans(
+    speakerA: Character,
+    speakerB: Character,
+    nextSpeakerId?: string | null,
+    forcedSpeakerId?: string | null
+  ): DebateSpeakerPlan[] {
+    if (!forcedSpeakerId) {
+      if (nextSpeakerId === speakerB.id) {
+        return [
+          { speaker: speakerB, opponent: speakerA, turnOrder: "B", isForced: false },
+          { speaker: speakerA, opponent: speakerB, turnOrder: "A", isForced: false },
+        ];
+      }
+
+      return [
+        { speaker: speakerA, opponent: speakerB, turnOrder: "A", isForced: false },
+        { speaker: speakerB, opponent: speakerA, turnOrder: "B", isForced: false },
+      ];
+    }
+
+    if (forcedSpeakerId === speakerA.id) {
+      return [
+        { speaker: speakerA, opponent: speakerB, turnOrder: "forced", isForced: true },
+        { speaker: speakerB, opponent: speakerA, turnOrder: "B", isForced: false },
+      ];
+    }
+
+    if (forcedSpeakerId === speakerB.id) {
+      return [
+        { speaker: speakerB, opponent: speakerA, turnOrder: "forced", isForced: true },
+        { speaker: speakerA, opponent: speakerB, turnOrder: "A", isForced: false },
+      ];
+    }
+
+    throw new ChatFlowError(
+      "DEBATE_CHARACTER_NOT_FOUND",
+      "forcedSpeakerId no pertenece a los personajes del debate",
+      "validation",
+      false
+    );
+  }
+
+  private getNextSpeakerId(plans: DebateSpeakerPlan[]): string | undefined {
+    if (plans.length === 0) {
+      return undefined;
+    }
+
+    return plans[0].speaker.id;
   }
 
   async processTextMessage(
@@ -488,7 +612,8 @@ export class ChatService {
     userId: string,
     userText: string,
     trace?: RequestTraceContext,
-    callbacks?: DebateProgressCallbacks
+    callbacks?: DebateProgressCallbacks,
+    options?: DebateProcessOptions
   ): Promise<DebateTurnResult> {
     const traceCtx = createTraceContext(trace, {
       conversationId,
@@ -516,6 +641,25 @@ export class ChatService {
     const speakerA = conversation.character;
     const speakerB = conversation.secondaryCharacter;
     const baseHistory = await this.loadConversationHistory(conversationId);
+    const manualSkips = options?.manualSkips ?? {};
+    const configuredNextSpeakerId = conversation.nextSpeakerId ?? conversation.preferredOpeningSpeakerId ?? speakerA.id;
+    const plans = this.resolveDebatePlans(
+      speakerA,
+      speakerB,
+      configuredNextSpeakerId,
+      options?.forcedSpeakerId ?? null
+    );
+
+    for (const manualSkipSpeakerId of Object.keys(manualSkips)) {
+      if (manualSkipSpeakerId !== speakerA.id && manualSkipSpeakerId !== speakerB.id) {
+        throw new ChatFlowError(
+          "INVALID_DEBATE_CONFIGURATION",
+          "manual skip para speaker no perteneciente al debate",
+          "validation",
+          false
+        );
+      }
+    }
 
     // Track persisted message IDs for compensating cleanup on failure
     const persistedMessageIds: number[] = [];
@@ -540,208 +684,250 @@ export class ChatService {
       userText,
     });
 
-    // 3. Generate & persist Speaker A
-    callbacks?.onTyping({
-      speakerId: speakerA.id,
-      speakerName: speakerA.name,
-      turnOrder: "A",
-    });
+    // 3. Generate rounds with flexible order and skip capability
+    const responses: DebateTurnCharacterResult[] = [];
+    let skipsCount = 0;
+    const roundHistory: Array<Pick<Message, "role" | "content">> = [...baseHistory];
 
-    logger.debug("[chat.processDebateMessage] debate_typing_emitted", {
-      ...traceCtx,
-      speakerId: speakerA.id,
-      phase: "typing_A",
-    });
-
-    let responseA: string;
-    try {
-      const aiResponseA = await this.generateAiResponse({
-        conversationId,
-        character: speakerA,
-        userText,
-        mode: "debate",
-        history: baseHistory,
-        debate: {
-          currentSpeaker: { id: speakerA.id, name: speakerA.name, role: speakerA.role },
-          opponent: { id: speakerB.id, name: speakerB.name, role: speakerB.role },
-          turnOrder: "A",
-        },
-        generateSuggestions: false,
+    for (const plan of plans) {
+      callbacks?.onTyping({
+        speakerId: plan.speaker.id,
+        speakerName: plan.speaker.name,
+        turnOrder: plan.turnOrder,
+        isForced: plan.isForced,
       });
-      responseA = aiResponseA.text;
-    } catch (error) {
-      await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
-      throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta del personaje A");
-    }
 
-    logger.debug("[chat.processDebateMessage] debate_speaker_a_generated", {
-      ...traceCtx,
-      speakerId: speakerA.id,
-      responseLength: responseA.length,
-    });
+      logger.debug("[chat.processDebateMessage] debate_typing_emitted", {
+        ...traceCtx,
+        speakerId: plan.speaker.id,
+        turnOrder: plan.turnOrder,
+        isForced: plan.isForced,
+      });
 
-    let speakerAMessage: Message;
-    try {
-      speakerAMessage = await this.dataSource.transaction(async (manager) => {
-        return manager.save(Message, {
-          conversationId,
-          role: "assistant",
-          content: responseA,
-          speakerCharacterId: speakerA.id,
+      const manualSkipReason = manualSkips[plan.speaker.id];
+      if (manualSkipReason != null) {
+        skipsCount += 1;
+        callbacks?.onTurnSkipped({
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          turnOrder: plan.turnOrder,
+          reason: "manual_user",
+          reasonDetail: manualSkipReason,
+          isForced: plan.isForced,
         });
-      });
-      persistedMessageIds.push(speakerAMessage.id);
-    } catch (error) {
-      await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
-      throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo persistir respuesta del personaje A");
-    }
-
-    // TTS for A
-    const turnResultA: DebateTurnCharacterResult = {
-      messageId: speakerAMessage.id,
-      text: responseA,
-      speakerId: speakerA.id,
-      speakerName: speakerA.name,
-    };
-
-    if (env.DEBATE_TTS_ENABLED) {
-      const audioA = await this.synthesizeAndUpload(
-        responseA,
-        speakerA.voiceId,
-        speakerAMessage.id,
-        userId,
-        conversationId,
-        { ...traceCtx, speaker: "A", speakerId: speakerA.id }
-      );
-      if ("audioBase64" in audioA) {
-        turnResultA.audioBase64 = audioA.audioBase64;
-      } else {
-        turnResultA.warning = audioA.warning;
-      }
-    }
-
-    logger.debug("[chat.processDebateMessage] debate_speaker_a_emitted", {
-      ...traceCtx,
-      messageId: speakerAMessage.id,
-      speakerId: speakerA.id,
-    });
-
-    callbacks?.onTurnReady({ ...turnResultA, turnOrder: "A" });
-
-    // 4. Generate & persist Speaker B
-    callbacks?.onTyping({
-      speakerId: speakerB.id,
-      speakerName: speakerB.name,
-      turnOrder: "B",
-    });
-
-    logger.debug("[chat.processDebateMessage] debate_typing_emitted", {
-      ...traceCtx,
-      speakerId: speakerB.id,
-      phase: "typing_B",
-    });
-
-    const historyForSpeakerB: Array<Pick<Message, "role" | "content">> = [
-      ...baseHistory,
-      { role: "assistant", content: responseA },
-    ];
-
-    let responseB: string;
-    try {
-      const aiResponseB = await this.generateAiResponse({
-        conversationId,
-        character: speakerB,
-        userText,
-        mode: "debate",
-        history: historyForSpeakerB,
-        debate: {
-          currentSpeaker: { id: speakerB.id, name: speakerB.name, role: speakerB.role },
-          opponent: { id: speakerA.id, name: speakerA.name, role: speakerA.role },
-          turnOrder: "B",
-        },
-        generateSuggestions: false,
-      });
-      responseB = aiResponseB.text;
-    } catch (error) {
-      await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
-      throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo generar respuesta del personaje B");
-    }
-
-    logger.debug("[chat.processDebateMessage] debate_speaker_b_generated", {
-      ...traceCtx,
-      speakerId: speakerB.id,
-      responseLength: responseB.length,
-    });
-
-    let speakerBMessage: Message;
-    try {
-      speakerBMessage = await this.dataSource.transaction(async (manager) => {
-        return manager.save(Message, {
-          conversationId,
-          role: "assistant",
-          content: responseB,
-          speakerCharacterId: speakerB.id,
+        responses.push({
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          skipped: true,
+          skipReason: "manual_user",
+          skipReasonDetail: manualSkipReason,
+          isForced: plan.isForced,
         });
-      });
-    } catch (error) {
-      await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
-      throw this.toChatFlowError(error, "AI_RESPONSE_FAILED", "No se pudo persistir respuesta del personaje B");
-    }
-
-    // TTS for B
-    const turnResultB: DebateTurnCharacterResult = {
-      messageId: speakerBMessage.id,
-      text: responseB,
-      speakerId: speakerB.id,
-      speakerName: speakerB.name,
-    };
-
-    if (env.DEBATE_TTS_ENABLED) {
-      const audioB = await this.synthesizeAndUpload(
-        responseB,
-        speakerB.voiceId,
-        speakerBMessage.id,
-        userId,
-        conversationId,
-        { ...traceCtx, speaker: "B", speakerId: speakerB.id }
-      );
-      if ("audioBase64" in audioB) {
-        turnResultB.audioBase64 = audioB.audioBase64;
-      } else {
-        turnResultB.warning = audioB.warning;
+        continue;
       }
+
+      const context = await this.vectorStore.getContext(
+        userText,
+        plan.speaker.vectorDbName || "default"
+      );
+
+      const systemPrompt = buildModeSystemPrompt({
+        character: plan.speaker,
+        mode: "debate",
+        debate: {
+          currentSpeaker: { id: plan.speaker.id, name: plan.speaker.name, role: plan.speaker.role },
+          opponent: { id: plan.opponent.id, name: plan.opponent.name, role: plan.opponent.role },
+          turnOrder: plan.turnOrder,
+          isForcedTurn: plan.isForced,
+          allowSkip: true,
+        },
+      });
+
+      let decision: DebateDecisionOutput | null = null;
+      let fallbackText = "";
+      try {
+        const aiDecision = await this.llm.generateResponse(
+          systemPrompt,
+          roundHistory as Message[],
+          userText,
+          context,
+          debateTurnSchema
+        );
+
+        decision = this.normalizeDebateDecision(aiDecision.structuredOutput ?? aiDecision.text);
+        fallbackText = aiDecision.text;
+      } catch (error) {
+        await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
+        throw this.toChatFlowError(
+          error,
+          "AI_RESPONSE_FAILED",
+          `No se pudo generar respuesta del personaje ${plan.speaker.name}`
+        );
+      }
+
+      const threshold = env.DEBATE_SKIP_CONFIDENCE_THRESHOLD;
+      const confidence = decision?.confidence ?? 0.5;
+      const shouldSkipForLowConfidence = confidence < threshold;
+      const shouldSkip = decision?.action === "skip" || shouldSkipForLowConfidence;
+
+      if (shouldSkip) {
+        const skipReason: DebateSkipReason = shouldSkipForLowConfidence
+          ? "auto_low_confidence"
+          : decision?.skipReason ?? "unknown";
+        const skipDetail = decision?.reason ?? "Sin contexto suficiente para responder con calidad.";
+
+        skipsCount += 1;
+        callbacks?.onTurnSkipped({
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          turnOrder: plan.turnOrder,
+          reason: skipReason,
+          reasonDetail: skipDetail,
+          confidence,
+          isForced: plan.isForced,
+        });
+        responses.push({
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          skipped: true,
+          skipReason,
+          skipReasonDetail: skipDetail,
+          confidence,
+          isForced: plan.isForced,
+        });
+        continue;
+      }
+
+      let responseText = (decision?.text ?? fallbackText).trim();
+      try {
+        responseText = sanitizeAssistantOutput(responseText, {
+          allowJsonEnvelope: true,
+          rejectCodeLikeContent: true,
+        });
+      } catch {
+        responseText = "";
+      }
+
+      if (!responseText) {
+        skipsCount += 1;
+        callbacks?.onTurnSkipped({
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          turnOrder: plan.turnOrder,
+          reason: "unknown",
+          reasonDetail: "No se obtuvo contenido conversacional valido.",
+          confidence,
+          isForced: plan.isForced,
+        });
+        responses.push({
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          skipped: true,
+          skipReason: "unknown",
+          skipReasonDetail: "No se obtuvo contenido conversacional valido.",
+          confidence,
+          isForced: plan.isForced,
+        });
+        continue;
+      }
+
+      let speakerMessage: Message;
+      try {
+        speakerMessage = await this.dataSource.transaction(async (manager) => {
+          return manager.save(Message, {
+            conversationId,
+            role: "assistant",
+            content: responseText,
+            speakerCharacterId: plan.speaker.id,
+          });
+        });
+        persistedMessageIds.push(speakerMessage.id);
+      } catch (error) {
+        await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
+        throw this.toChatFlowError(
+          error,
+          "AI_RESPONSE_FAILED",
+          `No se pudo persistir respuesta del personaje ${plan.speaker.name}`
+        );
+      }
+
+      const turnResult: DebateTurnCharacterResult = {
+        messageId: speakerMessage.id,
+        text: responseText,
+        speakerId: plan.speaker.id,
+        speakerName: plan.speaker.name,
+        confidence,
+        isForced: plan.isForced,
+      };
+
+      if (env.DEBATE_TTS_ENABLED) {
+        const audioResult = await this.synthesizeAndUpload(
+          responseText,
+          plan.speaker.voiceId,
+          speakerMessage.id,
+          userId,
+          conversationId,
+          { ...traceCtx, speakerId: plan.speaker.id, turnOrder: plan.turnOrder }
+        );
+        if ("audioBase64" in audioResult) {
+          turnResult.audioBase64 = audioResult.audioBase64;
+        } else {
+          turnResult.warning = audioResult.warning;
+        }
+      }
+
+      logger.debug("[chat.processDebateMessage] debate_speaker_emitted", {
+        ...traceCtx,
+        messageId: speakerMessage.id,
+        speakerId: plan.speaker.id,
+        turnOrder: plan.turnOrder,
+      });
+
+      callbacks?.onTurnReady({ ...turnResult, turnOrder: plan.turnOrder });
+      responses.push(turnResult);
+      roundHistory.push({ role: "assistant", content: responseText });
     }
 
-    logger.debug("[chat.processDebateMessage] debate_speaker_b_emitted", {
-      ...traceCtx,
-      messageId: speakerBMessage.id,
-      speakerId: speakerB.id,
-    });
+    const nextSpeakerId = options?.forcedSpeakerId
+      ? configuredNextSpeakerId
+      : this.getNextSpeakerId(plans);
 
-    callbacks?.onTurnReady({ ...turnResultB, turnOrder: "B" });
+    await this.conversationRepo.update(
+      { id: conversationId, userId },
+      {
+        nextSpeakerId,
+        lastForcedSpeakerId: options?.forcedSpeakerId ?? null,
+      } as Partial<Conversation>
+    );
 
-    // 5. Round complete
-    const responses = [turnResultA, turnResultB];
+    // 4. Round complete
     const warnings: DebateWarningPayload[] = responses
       .map((r) => r.warning)
       .filter((w): w is DebateWarningPayload => w != null);
 
     callbacks?.onRoundCompleted({
       warnings: warnings.length > 0 ? warnings : undefined,
+      responsesCount: responses.filter((r) => !r.skipped).length,
+      skipsCount,
+      nextSpeakerId,
     });
 
     logger.debug("[chat.processDebateMessage] debate_round_completed", {
       ...traceCtx,
       userMessageId: userMessage.id,
-      responseCount: responses.length,
-      speakerAId: speakerA.id,
-      speakerBId: speakerB.id,
+      responseCount: responses.filter((r) => !r.skipped).length,
+      skipsCount,
+      nextSpeakerId,
+      forcedSpeakerId: options?.forcedSpeakerId ?? null,
     });
 
     return {
       userMessageId: userMessage.id,
       userText,
       responses,
+      responsesCount: responses.filter((r) => !r.skipped).length,
+      skipsCount,
+      nextSpeakerId,
     };
   }
 }

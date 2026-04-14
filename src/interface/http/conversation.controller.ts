@@ -50,6 +50,15 @@ export class ConversationController {
       mode,
       primaryCharacter: conversation.character,
       secondaryCharacter: conversation.secondaryCharacter ?? null,
+      debateControl: mode === "debate"
+        ? {
+            turnMode: conversation.debateTurnMode ?? "auto_alternate",
+            preferredOpeningSpeakerId: conversation.preferredOpeningSpeakerId ?? null,
+            nextSpeakerId: conversation.nextSpeakerId ?? null,
+            lastForcedSpeakerId: conversation.lastForcedSpeakerId ?? null,
+            settings: conversation.debateSettings ?? null,
+          }
+        : null,
       messages: mappedMessages,
     };
   }
@@ -180,7 +189,7 @@ export class ConversationController {
   }
 
   async createDebate(req: Request, res: Response) {
-    const { characterIdA, characterIdB } = req.body;
+    const { characterIdA, characterIdB, turnMode, preferredOpeningSpeakerId } = req.body;
     const userId = extractUserId(req);
 
     if (!userId) return res.status(401).json({ error: "Usuario no autenticado" });
@@ -189,6 +198,10 @@ export class ConversationController {
     }
     if (characterIdA === characterIdB) {
       return res.status(400).json({ error: "characterIdA y characterIdB deben ser distintos" });
+    }
+
+    if (turnMode && turnMode !== "auto_alternate" && turnMode !== "manual") {
+      return res.status(400).json({ error: "turnMode debe ser auto_alternate o manual" });
     }
 
     try {
@@ -211,10 +224,24 @@ export class ConversationController {
         return res.status(404).json({ error: "Uno o ambos personajes no fueron encontrados o no son accesibles" });
       }
 
+      if (preferredOpeningSpeakerId && preferredOpeningSpeakerId !== characterA.id && preferredOpeningSpeakerId !== characterB.id) {
+        return res.status(400).json({ error: "preferredOpeningSpeakerId debe pertenecer a characterIdA o characterIdB" });
+      }
+
+      const openingSpeakerId = preferredOpeningSpeakerId ?? characterA.id;
+
       const newConversation = this.conversationRepo.create({
         character: { id: characterA.id },
         secondaryCharacter: { id: characterB.id },
         secondaryCharacterId: characterB.id,
+        debateTurnMode: turnMode ?? "auto_alternate",
+        preferredOpeningSpeakerId: openingSpeakerId,
+        nextSpeakerId: openingSpeakerId,
+        lastForcedSpeakerId: null,
+        debateSettings: {
+          autoSkipEnabled: true,
+          confidenceThreshold: env.DEBATE_SKIP_CONFIDENCE_THRESHOLD,
+        },
         userId,
       });
 

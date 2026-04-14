@@ -9,15 +9,19 @@ import {
   ConversationMode,
   DebateProgressCallbacks,
   DebateRoundCompletePayload,
+  DebateTurnSkippedPayload,
   DebateTurnPayload,
-  DebateTurnResultPayload,
   DebateTypingPayload,
   DebateUserAckPayload,
   LegacyConversationMode,
+  SendDebateTextPayload,
+  SkipDebateTurnPayload,
 } from "../../shared/types.js";
 import { wsAuthMiddleware } from "./ws-auth.middleware.js";
 
 export class ChatGateway {
+  private readonly pendingManualSkips = new Map<string, Map<string, string | undefined>>();
+
   constructor(
     private io: Server,
     private chatService: ChatService
@@ -80,6 +84,7 @@ export class ChatGateway {
       speaker_id: payload.speakerId,
       speaker_name: payload.speakerName,
       turn_order: payload.turnOrder,
+      is_forced: payload.isForced ?? false,
     });
   }
 
@@ -92,8 +97,23 @@ export class ChatGateway {
       speaker_id: payload.speakerId,
       speaker_name: payload.speakerName,
       turn_order: payload.turnOrder,
+      is_forced: payload.isForced ?? false,
       audio: payload.audio,
       warning: payload.warning,
+    });
+  }
+
+  private emitDebateTurnSkipped(conversationId: string, payload: DebateTurnSkippedPayload) {
+    this.io.to(conversationId).emit("debate_turn_skipped", {
+      conversationId: payload.conversationId,
+      traceId: payload.traceId,
+      speaker_id: payload.speakerId,
+      speaker_name: payload.speakerName,
+      turn_order: payload.turnOrder,
+      reason: payload.reason,
+      reason_detail: payload.reasonDetail,
+      confidence: payload.confidence,
+      is_forced: payload.isForced ?? false,
     });
   }
 
@@ -101,15 +121,10 @@ export class ChatGateway {
     this.io.to(conversationId).emit("debate_round_complete", {
       conversationId: payload.conversationId,
       traceId: payload.traceId,
+      responses_count: payload.responsesCount,
+      skips_count: payload.skipsCount,
+      next_speaker_id: payload.nextSpeakerId,
       warnings: payload.warnings,
-    });
-  }
-
-  private emitDebateLegacyTurnResult(conversationId: string, payload: DebateTurnResultPayload) {
-    this.io.to(conversationId).emit("debate_turn_result", payload);
-    logger.debug("[chat.gateway] debate_legacy_payload_emitted", {
-      conversationId,
-      traceId: payload.traceId,
     });
   }
 
@@ -163,14 +178,38 @@ export class ChatGateway {
         await this.handleAudioFlow(socket, { ...data, mode: normalizedMode.effectiveMode }, trace);
       });
 
-      socket.on("send_debate_text", async (data: { conversationId: string; text: string }) => {
+      socket.on("send_debate_text", async (data: SendDebateTextPayload) => {
         const userId = socket.data.userId as string;
         const trace = this.buildTrace(socket, "send_debate_text", data.conversationId);
         logger.debug("[chat.gateway.send_debate_text] received", {
           ...trace,
           textLength: data.text?.length ?? 0,
+          forcedSpeakerId: data.forced_speaker_id ?? null,
         });
-        await this.handleDebateTextFlow(socket, data.conversationId, userId, data.text, trace);
+        await this.handleDebateTextFlow(socket, data, userId, trace);
+      });
+
+      socket.on("skip_debate_turn", async (data: SkipDebateTurnPayload) => {
+        const trace = this.buildTrace(socket, "skip_debate_turn", data.conversationId);
+        logger.debug("[chat.gateway.skip_debate_turn] received", {
+          ...trace,
+          speakerId: data.speaker_id,
+        });
+
+        if (!data.conversationId || !data.speaker_id) {
+          socket.emit("debate_error", {
+            traceId: trace.traceId,
+            code: "INVALID_DEBATE_CONFIGURATION",
+            message: "conversationId y speaker_id son requeridos",
+            stage: "validation",
+            retryable: false,
+          });
+          return;
+        }
+
+        const byConversation = this.pendingManualSkips.get(data.conversationId) ?? new Map<string, string | undefined>();
+        byConversation.set(data.speaker_id, data.reason);
+        this.pendingManualSkips.set(data.conversationId, byConversation);
       });
 
       socket.on("disconnect", () =>
@@ -283,13 +322,19 @@ export class ChatGateway {
 
   private async handleDebateTextFlow(
     socket: Socket,
-    conversationId: string,
+    payload: SendDebateTextPayload,
     userId: string,
-    text: string,
     trace: ReturnType<ChatGateway["buildTrace"]>
   ) {
+    const conversationId = payload.conversationId;
+    const text = payload.text;
     const traceId = trace.traceId ?? generateTraceId("ws");
-    const turnPayloads: DebateTurnPayload[] = [];
+    const pendingSkips = this.pendingManualSkips.get(conversationId);
+    const manualSkips = pendingSkips ? Object.fromEntries(pendingSkips.entries()) : {};
+
+    if (pendingSkips) {
+      this.pendingManualSkips.delete(conversationId);
+    }
 
     const callbacks: DebateProgressCallbacks = {
       onUserMessagePersisted: (payload) => {
@@ -307,9 +352,14 @@ export class ChatGateway {
           speakerId: payload.speakerId,
           speakerName: payload.speakerName,
           turnOrder: payload.turnOrder,
+          isForced: payload.isForced,
         });
       },
       onTurnReady: (payload) => {
+        if (!payload.messageId || !payload.text) {
+          return;
+        }
+
         const turnPayload: DebateTurnPayload = {
           conversationId,
           traceId,
@@ -318,16 +368,32 @@ export class ChatGateway {
           speakerId: payload.speakerId,
           speakerName: payload.speakerName,
           turnOrder: payload.turnOrder,
+          isForced: payload.isForced,
           audio: payload.audioBase64,
           warning: payload.warning,
         };
-        turnPayloads.push(turnPayload);
         this.emitDebateTurn(conversationId, turnPayload);
+      },
+      onTurnSkipped: (payload) => {
+        this.emitDebateTurnSkipped(conversationId, {
+          conversationId,
+          traceId,
+          speakerId: payload.speakerId,
+          speakerName: payload.speakerName,
+          turnOrder: payload.turnOrder,
+          reason: payload.reason,
+          reasonDetail: payload.reasonDetail,
+          confidence: payload.confidence,
+          isForced: payload.isForced,
+        });
       },
       onRoundCompleted: (payload) => {
         this.emitDebateRoundComplete(conversationId, {
           conversationId,
           traceId,
+          responsesCount: payload.responsesCount,
+          skipsCount: payload.skipsCount,
+          nextSpeakerId: payload.nextSpeakerId,
           warnings: payload.warnings,
         });
       },
@@ -339,29 +405,19 @@ export class ChatGateway {
         userId,
         text,
         trace,
-        callbacks
+        callbacks,
+        {
+          forcedSpeakerId: payload.forced_speaker_id,
+          manualSkips,
+        }
       );
 
       logger.debug("[chat.gateway.send_debate_text] processed", {
         ...trace,
         userMessageId: result.userMessageId,
-        responseCount: result.responses.length,
-      });
-
-      // Legacy event for backward compatibility
-      this.emitDebateLegacyTurnResult(conversationId, {
-        conversationId,
-        traceId,
-        user_message_id: result.userMessageId,
-        user_text: result.userText,
-        responses: result.responses.map((response) => ({
-          message_id: response.messageId,
-          text: response.text,
-          speaker_id: response.speakerId,
-          speaker_name: response.speakerName,
-          audio: response.audioBase64,
-          warning: response.warning,
-        })),
+        responseCount: result.responsesCount,
+        skipsCount: result.skipsCount,
+        nextSpeakerId: result.nextSpeakerId,
       });
     } catch (error) {
       logger.error("[chat.gateway.send_debate_text] failed", {
