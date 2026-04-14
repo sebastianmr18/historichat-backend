@@ -9,6 +9,10 @@ describe("interview mode prompts", () => {
     name: "Ada",
     role: "Scientist",
     biography: "Pioneer",
+    description: "Analitica y precisa",
+    years: "1815-1852",
+    epoch: "Revolucion industrial",
+    category: "Ciencia",
   } as any;
 
   it("builds a reusable base prompt from character props", () => {
@@ -16,6 +20,10 @@ describe("interview mode prompts", () => {
 
     expect(prompt).toContain("Actua como Ada");
     expect(prompt).toContain("Rol: Scientist");
+    expect(prompt).toContain("Descripcion: Analitica y precisa");
+    expect(prompt).toContain("Periodo: 1815-1852");
+    expect(prompt).toContain("Epoca: Revolucion industrial");
+    expect(prompt).toContain("Categoria: Ciencia");
     expect(prompt).toContain("entre 50 y 75 palabras");
     expect(prompt).not.toContain("Estas en modo entrevista.");
   });
