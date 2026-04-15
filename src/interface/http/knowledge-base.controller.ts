@@ -2,7 +2,7 @@ import { Request, RequestHandler, Response } from "express";
 import multer from "multer";
 import { AppDataSource } from "../../config/database.js";
 import { env } from "../../config/env.js";
-import { extractUserId } from "../../api/auth.middleware.js";
+import { extractUserId } from "../../api/auth.utils.js";
 import {
   KnowledgeBaseIngestionError,
   KnowledgeBaseIngestionService,

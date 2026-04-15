@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../../config/database.js";
 import { Profile } from "../../infrastructure/database/entities/Profile.js";
-import { extractUserId } from "../../api/auth.middleware.js";
+import { extractUserId } from "../../api/auth.utils.js";
 import { formatProfileResponse } from "./presenters/profile.presenter.js";
 import { logger } from "../../infrastructure/logging/logger.js";
 

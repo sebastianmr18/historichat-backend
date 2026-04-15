@@ -149,22 +149,6 @@ export interface DebateRoundCompletePayload {
   warnings?: DebateWarningPayload[];
 }
 
-/** Legacy payload — kept for backward compatibility during migration */
-export interface DebateTurnResultPayload {
-  conversationId: string;
-  traceId: string;
-  user_message_id: number;
-  user_text: string;
-  responses: Array<{
-    message_id: number;
-    text: string;
-    speaker_id: string;
-    speaker_name: string;
-    audio?: string;
-    warning?: DebateWarningPayload;
-  }>;
-}
-
 // --- Debate progress callbacks ---
 
 export interface DebateProgressCallbacks {

@@ -5,7 +5,7 @@ import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
 import { logger } from "../../infrastructure/logging/logger.js";
-import { extractUserId } from "../../api/auth.middleware.js";
+import { extractUserId } from "../../api/auth.utils.js";
 import { serializeError } from "../../shared/errors.js";
 import { generateTraceId } from "../../shared/trace.js";
 import { IStorageService } from "../../shared/types.js";

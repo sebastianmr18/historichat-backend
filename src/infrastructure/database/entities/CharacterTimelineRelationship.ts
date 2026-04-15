@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, JoinColumn, Column, PrimaryColumn, Index, Relation } from "typeorm";
+import { Entity, ManyToOne, JoinColumn, PrimaryColumn, Index, Relation } from "typeorm";
 import { CharacterRelationship } from "./CharacterRelationship.js";
 import { CharacterTimelineEntry } from "./CharacterTimelineEntry.js";
 

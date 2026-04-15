@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { Request, Response } from "express";
 import { ProfileController } from "../profile.controller.js";
 import { AppDataSource } from "../../../config/database.js";

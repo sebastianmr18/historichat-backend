@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import { AppDataSource } from "../config/database.js";
 import { Profile } from "../infrastructure/database/entities/Profile.js";
 import { isUserRole } from "../domain/auth/user-role.js";
-import { extractUserId } from "./auth.middleware.js";
+import { extractUserId } from "./auth.utils.js";
 
 export const requireAdminRole: RequestHandler = async (req, res, next) => {
   const userId = extractUserId(req);

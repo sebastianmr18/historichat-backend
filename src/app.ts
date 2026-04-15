@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import { Router } from 'express';
 import { env } from './config/env.js';
 import apiRoutes from './interface/http/routes.js';
-import { requireAuth } from './api/auth.middleware.js';
+import { requireAuthentication } from './api/authentication.middleware.js';
 
 const app: Application = express();
 
@@ -24,7 +24,7 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 const protectedApiRouter = Router();
-protectedApiRouter.use(requireAuth);    
+protectedApiRouter.use(requireAuthentication);
 
 protectedApiRouter.use('/', apiRoutes); 
 

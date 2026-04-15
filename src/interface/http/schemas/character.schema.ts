@@ -32,5 +32,3 @@ export const createCharacterSchema = z.object({
   topics: z.array(z.string()).default([]),
   isPublic: z.boolean().default(false),
 });
-
-export type CreateCharacterInput = z.infer<typeof createCharacterSchema>;

@@ -13,7 +13,7 @@ import { CharacterRelationship } from "../../infrastructure/database/entities/Ch
 import { CharacterTimelineEntry } from "../../infrastructure/database/entities/CharacterTimelineEntry.js";
 import { ContentVariantCopy } from "../../infrastructure/database/entities/ContentVariantCopy.js";
 import { logger } from "../../infrastructure/logging/logger.js";
-import { extractUserId } from "../../api/auth.middleware.js";
+import { extractUserId } from "../../api/auth.utils.js";
 import { serializeError } from "../../shared/errors.js";
 import { IStorageService } from "../../shared/types.js";
 import { createCharacterSchema } from "./schemas/character.schema.js";
