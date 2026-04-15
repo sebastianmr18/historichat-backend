@@ -68,6 +68,13 @@ export interface SendDebateTextPayload {
   forced_speaker_id?: string | null;
 }
 
+export interface SendDebateAudioPayload {
+  conversationId: string;
+  audioBase64: string;
+  mimeType?: string;
+  forced_speaker_id?: string | null;
+}
+
 export interface SkipDebateTurnPayload {
   conversationId: string;
   speaker_id: string;

@@ -44,6 +44,10 @@ interface DebateDecisionOutput {
 interface DebateProcessOptions {
   forcedSpeakerId?: string | null;
   manualSkips?: Record<string, string | undefined>;
+  userAudio?: {
+    audioPath: string;
+    mimeType: string;
+  };
 }
 
 interface DebateSpeakerPlan {
@@ -607,6 +611,117 @@ export class ChatService {
     };
   }
 
+  async processDebateAudioMessage(input: {
+    conversationId: string;
+    userId: string;
+    audioBuffer: Buffer;
+    mimeType: string;
+    trace?: RequestTraceContext;
+    callbacks?: DebateProgressCallbacks;
+    forcedSpeakerId?: string | null;
+    manualSkips?: Record<string, string | undefined>;
+  }): Promise<DebateTurnResult> {
+    const traceCtx = createTraceContext(input.trace, {
+      conversationId: input.conversationId,
+      userId: input.userId,
+      phase: "process_debate_audio_message",
+    });
+
+    logger.debug("[chat.processDebateAudioMessage] started", {
+      ...traceCtx,
+      mimeType: input.mimeType,
+      audioBytes: input.audioBuffer.length,
+    });
+
+    const conversation = await this.getConversation(input.conversationId, input.userId);
+
+    if (!conversation.secondaryCharacterId || !conversation.secondaryCharacter) {
+      throw new ChatFlowError(
+        "DEBATE_NOT_AVAILABLE",
+        "La conversación no está configurada en modo debate",
+        "validation",
+        false
+      );
+    }
+
+    const userAudioExtension = getFileExtensionFromMimeType(input.mimeType);
+    const audioReference = `audio_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    const userAudioPath = `${input.userId}/${input.conversationId}/${audioReference}.${userAudioExtension}`;
+    const encoding = getEncodingFromMimeType(input.mimeType);
+
+    logger.debug("[chat.processDebateAudioMessage] user_audio_prepared", {
+      ...traceCtx,
+      userAudioExtension,
+      userAudioPath,
+      encoding,
+    });
+
+    const [uploadResult, sttResult] = await Promise.allSettled([
+      this.storageService.uploadFile(this.storageBucket, userAudioPath, input.audioBuffer, input.mimeType),
+      this.voice.transcribe(input.audioBuffer, encoding),
+    ]);
+
+    logger.debug("[chat.processDebateAudioMessage] upload_stt_completed", {
+      ...traceCtx,
+      uploadStatus: uploadResult.status,
+      sttStatus: sttResult.status,
+      uploadError: uploadResult.status === "rejected" ? serializeError(uploadResult.reason) : undefined,
+      sttError: sttResult.status === "rejected" ? serializeError(sttResult.reason) : undefined,
+    });
+
+    if (sttResult.status === "rejected") {
+      throw new ChatFlowError(
+        "STT_FAILED",
+        "No se pudo transcribir el audio",
+        "stt",
+        true,
+        sttResult.reason
+      );
+    }
+
+    const transcription = sttResult.value.trim();
+    if (!transcription) {
+      throw new ChatFlowError(
+        "NO_SPEECH",
+        "No se detectó habla en el audio. Inténtalo de nuevo.",
+        "stt",
+        true
+      );
+    }
+
+    if (uploadResult.status === "rejected") {
+      throw new ChatFlowError(
+        "AUDIO_UPLOAD_FAILED",
+        "No se pudo subir el audio",
+        "upload",
+        true,
+        uploadResult.reason
+      );
+    }
+
+    logger.debug("[chat.processDebateAudioMessage] transcription_ready", {
+      ...traceCtx,
+      transcriptionLength: transcription.length,
+      uploadedUserAudioPath: uploadResult.value,
+    });
+
+    return this.processDebateMessage(
+      input.conversationId,
+      input.userId,
+      transcription,
+      input.trace,
+      input.callbacks,
+      {
+        forcedSpeakerId: input.forcedSpeakerId,
+        manualSkips: input.manualSkips,
+        userAudio: {
+          audioPath: uploadResult.value,
+          mimeType: input.mimeType,
+        },
+      }
+    );
+  }
+
   async processDebateMessage(
     conversationId: string,
     userId: string,
@@ -670,6 +785,9 @@ export class ChatService {
         conversationId,
         role: "user",
         content: userText,
+        mediaType: options?.userAudio?.mimeType,
+        audioPath: options?.userAudio?.audioPath,
+        audioStorageId: options?.userAudio?.audioPath,
       });
     });
     persistedMessageIds.push(userMessage.id);

@@ -328,6 +328,58 @@ describe("ChatService", () => {
   });
 
   // -------------------------------------------------------------------------
+  // processDebateAudioMessage
+  // -------------------------------------------------------------------------
+
+  describe("processDebateAudioMessage", () => {
+    beforeEach(() => {
+      mockConversationFindOne.mockResolvedValue({
+        id: "conv-debate",
+        userId: "user-1",
+        character: CHARACTER_A,
+        secondaryCharacter: CHARACTER_B,
+        secondaryCharacterId: "char-b",
+      });
+    });
+
+    it("throws ChatFlowError with NO_SPEECH when debate audio transcription is empty", async () => {
+      mockVoice.transcribe.mockResolvedValue("   ");
+
+      await expect(
+        service.processDebateAudioMessage({
+          conversationId: "conv-debate",
+          userId: "user-1",
+          audioBuffer: Buffer.from("silence"),
+          mimeType: "audio/webm",
+        })
+      ).rejects.toMatchObject({ code: "NO_SPEECH" });
+    });
+
+    it("persists user audio metadata when debate audio is transcribed successfully", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "Response from A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "Response from B", provider: "gemini", model: "gemini-test" });
+
+      await service.processDebateAudioMessage({
+        conversationId: "conv-debate",
+        userId: "user-1",
+        audioBuffer: Buffer.from("audio"),
+        mimeType: "audio/webm",
+      });
+
+      expect(mockTransactionSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: "user",
+          content: "transcribed text",
+          mediaType: "audio/webm",
+          audioPath: "uploaded/path.mp3",
+          audioStorageId: "uploaded/path.mp3",
+        })
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // processDebateMessage
   // -------------------------------------------------------------------------
 

@@ -9,6 +9,7 @@ import {
   ConversationMode,
   DebateProgressCallbacks,
   DebateRoundCompletePayload,
+  SendDebateAudioPayload,
   DebateTurnSkippedPayload,
   DebateTurnPayload,
   DebateTypingPayload,
@@ -189,6 +190,19 @@ export class ChatGateway {
         await this.handleDebateTextFlow(socket, data, userId, trace);
       });
 
+      socket.on("send_debate_audio", async (data: SendDebateAudioPayload) => {
+        const userId = socket.data.userId as string;
+        const trace = this.buildTrace(socket, "send_debate_audio", data.conversationId);
+        logger.debug("[chat.gateway.send_debate_audio] received", {
+          ...trace,
+          hasAudioPayload: Boolean(data.audioBase64),
+          audioBase64Length: data.audioBase64?.length ?? 0,
+          mimeType: data.mimeType ?? "audio/webm",
+          forcedSpeakerId: data.forced_speaker_id ?? null,
+        });
+        await this.handleDebateAudioFlow(socket, data, userId, trace);
+      });
+
       socket.on("skip_debate_turn", async (data: SkipDebateTurnPayload) => {
         const trace = this.buildTrace(socket, "skip_debate_turn", data.conversationId);
         logger.debug("[chat.gateway.skip_debate_turn] received", {
@@ -329,14 +343,131 @@ export class ChatGateway {
     const conversationId = payload.conversationId;
     const text = payload.text;
     const traceId = trace.traceId ?? generateTraceId("ws");
+    const manualSkips = this.consumePendingManualSkips(conversationId);
+    const callbacks = this.createDebateCallbacks(conversationId, traceId);
+
+    try {
+      const result = await this.chatService.processDebateMessage(
+        conversationId,
+        userId,
+        text,
+        trace,
+        callbacks,
+        {
+          forcedSpeakerId: payload.forced_speaker_id,
+          manualSkips,
+        }
+      );
+
+      logger.debug("[chat.gateway.send_debate_text] processed", {
+        ...trace,
+        userMessageId: result.userMessageId,
+        responseCount: result.responsesCount,
+        skipsCount: result.skipsCount,
+        nextSpeakerId: result.nextSpeakerId,
+      });
+    } catch (error) {
+      logger.error("[chat.gateway.send_debate_text] failed", {
+        ...trace,
+        conversationId,
+        userId,
+        error: serializeError(error),
+      });
+
+      socket.emit("debate_error", {
+        traceId,
+        ...toClientError(error, "Error procesando turno de debate"),
+      });
+    }
+  }
+
+  private async handleDebateAudioFlow(
+    socket: Socket,
+    payload: SendDebateAudioPayload,
+    userId: string,
+    trace: ReturnType<ChatGateway["buildTrace"]>
+  ) {
+    const conversationId = payload.conversationId;
+    const traceId = trace.traceId ?? generateTraceId("ws");
+
+    if (!payload.audioBase64) {
+      socket.emit("debate_error", {
+        traceId,
+        code: "INVALID_AUDIO_PAYLOAD",
+        message: "audioBase64 es requerido",
+        stage: "validation",
+        retryable: false,
+      });
+      return;
+    }
+
+    const manualSkips = this.consumePendingManualSkips(conversationId);
+    const callbacks = this.createDebateCallbacks(conversationId, traceId);
+
+    try {
+      const audioBuffer = this.decodeAudioPayload(payload.audioBase64);
+      if (audioBuffer.length === 0) {
+        socket.emit("debate_error", {
+          traceId,
+          code: "INVALID_AUDIO_PAYLOAD",
+          message: "audioBase64 no contiene datos validos",
+          stage: "validation",
+          retryable: false,
+        });
+        return;
+      }
+
+      logger.debug("[chat.gateway.send_debate_audio] decoded", {
+        ...trace,
+        mimeType: payload.mimeType ?? "audio/webm",
+        audioBytes: audioBuffer.length,
+      });
+
+      const result = await this.chatService.processDebateAudioMessage({
+        conversationId,
+        userId,
+        audioBuffer,
+        mimeType: payload.mimeType ?? "audio/webm",
+        trace,
+        callbacks,
+        forcedSpeakerId: payload.forced_speaker_id,
+        manualSkips,
+      });
+
+      logger.debug("[chat.gateway.send_debate_audio] processed", {
+        ...trace,
+        userMessageId: result.userMessageId,
+        transcriptionLength: result.userText.length,
+        responseCount: result.responsesCount,
+        skipsCount: result.skipsCount,
+        nextSpeakerId: result.nextSpeakerId,
+      });
+    } catch (error) {
+      logger.error("[chat.gateway.send_debate_audio] failed", {
+        ...trace,
+        conversationId,
+        userId,
+        error: serializeError(error),
+      });
+
+      socket.emit("debate_error", {
+        traceId,
+        ...toClientError(error, "Error procesando audio de debate"),
+      });
+    }
+  }
+
+  private consumePendingManualSkips(conversationId: string): Record<string, string | undefined> {
     const pendingSkips = this.pendingManualSkips.get(conversationId);
     const manualSkips = pendingSkips ? Object.fromEntries(pendingSkips.entries()) : {};
-
     if (pendingSkips) {
       this.pendingManualSkips.delete(conversationId);
     }
+    return manualSkips;
+  }
 
-    const callbacks: DebateProgressCallbacks = {
+  private createDebateCallbacks(conversationId: string, traceId: string): DebateProgressCallbacks {
+    return {
       onUserMessagePersisted: (payload) => {
         this.emitDebateUserAck(conversationId, {
           conversationId,
@@ -398,39 +529,5 @@ export class ChatGateway {
         });
       },
     };
-
-    try {
-      const result = await this.chatService.processDebateMessage(
-        conversationId,
-        userId,
-        text,
-        trace,
-        callbacks,
-        {
-          forcedSpeakerId: payload.forced_speaker_id,
-          manualSkips,
-        }
-      );
-
-      logger.debug("[chat.gateway.send_debate_text] processed", {
-        ...trace,
-        userMessageId: result.userMessageId,
-        responseCount: result.responsesCount,
-        skipsCount: result.skipsCount,
-        nextSpeakerId: result.nextSpeakerId,
-      });
-    } catch (error) {
-      logger.error("[chat.gateway.send_debate_text] failed", {
-        ...trace,
-        conversationId,
-        userId,
-        error: serializeError(error),
-      });
-
-      socket.emit("debate_error", {
-        traceId,
-        ...toClientError(error, "Error procesando turno de debate"),
-      });
-    }
   }
 }
