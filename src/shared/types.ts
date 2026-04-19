@@ -185,4 +185,7 @@ export interface DebateProgressCallbacks {
     skipsCount: number;
     nextSpeakerId?: string;
   }): void;
+  onSuggestionsReady?(payload: {
+    suggestions: string[];
+  }): void;
 }

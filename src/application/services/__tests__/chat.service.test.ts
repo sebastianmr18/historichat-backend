@@ -431,7 +431,6 @@ describe("ChatService", () => {
       await service.processDebateMessage("conv-debate", "user-1", "Start");
 
       // Second Gemini call corresponds to speaker B main response.
-      // Debate flow does not generate suggestions in this refactor.
       const speakerBMainCall = mockGemini.generateResponse.mock.calls[1];
       // Args: (systemPrompt, history, userText, context)
       // history is the 2nd argument
@@ -440,6 +439,68 @@ describe("ChatService", () => {
           expect.objectContaining({ role: "assistant", content: "A says hello" }),
         ])
       );
+    });
+
+    it("emits debate suggestions through callback after round completion", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({
+          text: "",
+          provider: "gemini",
+          model: "gemini-test",
+          structuredOutput: {
+            suggestions: ["Pide evidencia concreta", "Solicita una refutacion", "Abre una nueva arista"],
+          },
+        });
+
+      const callOrder: string[] = [];
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(() => callOrder.push("userAck")),
+        onTyping: vi.fn((p: any) => callOrder.push(`typing_${p.turnOrder}`)),
+        onTurnReady: vi.fn((p: any) => callOrder.push(`turn_${p.turnOrder}`)),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(() => callOrder.push("roundComplete")),
+        onSuggestionsReady: vi.fn(() => callOrder.push("suggestions")),
+      };
+
+      await service.processDebateMessage("conv-debate", "user-1", "Debatamos", undefined, callbacks);
+
+      expect(callbacks.onSuggestionsReady).toHaveBeenCalledTimes(1);
+      expect(callbacks.onSuggestionsReady).toHaveBeenCalledWith({
+        suggestions: ["Pide evidencia concreta", "Solicita una refutacion", "Abre una nueva arista"],
+      });
+      expect(callOrder).toEqual([
+        "userAck",
+        "typing_A",
+        "turn_A",
+        "typing_B",
+        "turn_B",
+        "roundComplete",
+        "suggestions",
+      ]);
+    });
+
+    it("completes debate round even when suggestions generation fails", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" })
+        .mockRejectedValueOnce(new Error("Suggestions down"));
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+        onSuggestionsReady: vi.fn(),
+      };
+
+      const result = await service.processDebateMessage("conv-debate", "user-1", "Debatamos", undefined, callbacks);
+
+      expect(result.responses).toHaveLength(2);
+      expect(callbacks.onRoundCompleted).toHaveBeenCalledTimes(1);
+      expect(callbacks.onSuggestionsReady).not.toHaveBeenCalled();
     });
 
     it("synthesizes audio for both speakers when DEBATE_TTS_ENABLED", async () => {

@@ -528,6 +528,9 @@ export class ChatGateway {
           warnings: payload.warnings,
         });
       },
+      onSuggestionsReady: (payload) => {
+        this.emitSuggestions(conversationId, payload.suggestions);
+      },
     };
   }
 }

@@ -365,6 +365,64 @@ export class ChatService {
     );
   }
 
+  private async generateDebateRoundSuggestions(params: {
+    conversationId: string;
+    userText: string;
+    history: Array<Pick<Message, "role" | "content">>;
+    currentSpeaker: Character;
+    opponent: Character;
+    traceCtx: Record<string, unknown>;
+  }): Promise<string[] | undefined> {
+    try {
+      const suggestionsPrompt = buildModeSuggestionsPrompt({
+        mode: "debate",
+        lastMessages: params.history,
+        characterName: params.currentSpeaker.name,
+        debate: {
+          currentSpeaker: {
+            id: params.currentSpeaker.id,
+            name: params.currentSpeaker.name,
+            role: params.currentSpeaker.role,
+          },
+          opponent: {
+            id: params.opponent.id,
+            name: params.opponent.name,
+            role: params.opponent.role,
+          },
+        },
+      });
+
+      const suggestionsResponse = await this.llm.generateResponse(
+        "You are a helpful assistant that generates follow-up suggestions.",
+        [],
+        suggestionsPrompt,
+        undefined,
+        suggestionsSchema
+      );
+
+      if (!suggestionsResponse.structuredOutput) {
+        return undefined;
+      }
+
+      const parsed = suggestionsResponse.structuredOutput as { suggestions?: string[] };
+      return parsed.suggestions
+        ?.filter((s) => typeof s === "string" && s.length > 0)
+        .map((s) => sanitizeAssistantOutput(s, {
+          allowJsonEnvelope: false,
+          rejectCodeLikeContent: true,
+        }))
+        .slice(0, 3);
+    } catch (error) {
+      logger.warn("[chat.processDebateMessage] suggestions generation failed, proceeding without", {
+        ...params.traceCtx,
+        conversationId: params.conversationId,
+        userTextLength: params.userText.length,
+        error: serializeError(error),
+      });
+      return undefined;
+    }
+  }
+
   private getNextSpeakerId(plans: DebateSpeakerPlan[]): string | undefined {
     if (plans.length === 0) {
       return undefined;
@@ -1030,12 +1088,38 @@ export class ChatService {
       nextSpeakerId,
     });
 
+    const nextSpeaker = nextSpeakerId === speakerB.id ? speakerB : speakerA;
+    const opponent = nextSpeaker.id === speakerA.id ? speakerB : speakerA;
+    const suggestionHistory: Array<Pick<Message, "role" | "content">> = [
+      ...baseHistory,
+      { role: "user", content: userText },
+      ...responses
+        .filter((response): response is DebateTurnCharacterResult & { text: string } =>
+          !response.skipped && Boolean(response.text)
+        )
+        .map((response) => ({ role: "assistant" as const, content: response.text! })),
+    ];
+
+    const suggestions = await this.generateDebateRoundSuggestions({
+      conversationId,
+      userText,
+      history: suggestionHistory,
+      currentSpeaker: nextSpeaker,
+      opponent,
+      traceCtx,
+    });
+
+    if (suggestions && suggestions.length > 0) {
+      callbacks?.onSuggestionsReady?.({ suggestions });
+    }
+
     logger.debug("[chat.processDebateMessage] debate_round_completed", {
       ...traceCtx,
       userMessageId: userMessage.id,
       responseCount: responses.filter((r) => !r.skipped).length,
       skipsCount,
       nextSpeakerId,
+      suggestionsCount: suggestions?.length ?? 0,
       forcedSpeakerId: options?.forcedSpeakerId ?? null,
     });
 
