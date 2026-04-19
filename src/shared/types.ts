@@ -55,6 +55,19 @@ export interface DebateWarningPayload {
 
 export type DebateTurnOrder = "A" | "B" | "forced";
 
+export type DebateSpeakerSelectionMethod =
+  | "explicit_forced"
+  | "text_mention"
+  | "fallback_next_speaker"
+  | "manual_mode";
+
+export interface DebateSpeakerInferenceDetails {
+  method: DebateSpeakerSelectionMethod;
+  selectedSpeakerId: string;
+  mentionText?: string;
+  confidence?: number;
+}
+
 export type DebateSkipReason =
   | "manual_user"
   | "auto_low_confidence"
@@ -91,6 +104,9 @@ export interface DebateTurnCharacterResult {
   skipReasonDetail?: string;
   confidence?: number;
   isForced?: boolean;
+  inferenceMethod?: DebateSpeakerSelectionMethod;
+  detectedMentionText?: string;
+  mentionConfidence?: number;
   audioBase64?: string;
   warning?: DebateWarningPayload;
 }
@@ -102,6 +118,7 @@ export interface DebateTurnResult {
   responsesCount: number;
   skipsCount: number;
   nextSpeakerId?: string;
+  inferenceDetails?: DebateSpeakerInferenceDetails;
 }
 
 // --- Granular debate event payloads ---
@@ -131,6 +148,9 @@ export interface DebateTurnPayload {
   speakerName: string;
   turnOrder: DebateTurnOrder;
   isForced?: boolean;
+  inference_method?: DebateSpeakerSelectionMethod;
+  detected_mention_text?: string;
+  mention_confidence?: number;
   audio?: string;
   warning?: DebateWarningPayload;
 }
@@ -146,6 +166,9 @@ export interface DebateTurnSkippedPayload {
   reasonDetail?: string;
   confidence?: number;
   isForced?: boolean;
+  inference_method?: DebateSpeakerSelectionMethod;
+  detected_mention_text?: string;
+  mention_confidence?: number;
 }
 
 export interface DebateRoundCompletePayload {
@@ -155,6 +178,10 @@ export interface DebateRoundCompletePayload {
   skipsCount: number;
   nextSpeakerId?: string;
   warnings?: DebateWarningPayload[];
+  inference_method?: DebateSpeakerSelectionMethod;
+  selected_speaker_id?: string;
+  detected_mention_text?: string;
+  mention_confidence?: number;
 }
 
 // --- Debate progress callbacks ---
@@ -180,12 +207,16 @@ export interface DebateProgressCallbacks {
     reasonDetail?: string;
     confidence?: number;
     isForced?: boolean;
+    inferenceMethod?: DebateSpeakerSelectionMethod;
+    detectedMentionText?: string;
+    mentionConfidence?: number;
   }): void;
   onRoundCompleted(payload: {
     warnings?: DebateWarningPayload[];
     responsesCount: number;
     skipsCount: number;
     nextSpeakerId?: string;
+    inferenceDetails?: DebateSpeakerInferenceDetails;
   }): void;
   onSuggestionsReady?(payload: {
     suggestions: string[];

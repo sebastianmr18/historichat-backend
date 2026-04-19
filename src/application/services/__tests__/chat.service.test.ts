@@ -111,6 +111,7 @@ vi.mock("../../../config/env.js", () => ({
     SUPABASE_STORAGE_BUCKET: "test-bucket",
     DEBATE_TTS_ENABLED: true,
     DEBATE_SKIP_CONFIDENCE_THRESHOLD: 0.35,
+    DEBATE_SPEAKER_INFERENCE_THRESHOLD: 0.7,
   },
 }));
 
@@ -863,6 +864,76 @@ describe("ChatService", () => {
         if (!Array.isArray(historyArg)) continue;
         expect(historyArg.every((m: any) => m.role !== "event")).toBe(true);
       }
+    });
+
+    it("infers speaker B first when user explicitly addresses B", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "B first", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "A second", provider: "gemini", model: "gemini-test" });
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "ey B, que opinas de esto?"
+      );
+
+      expect(result.responses[0].speakerId).toBe("char-b");
+      expect(result.responses[1].speakerId).toBe("char-a");
+      expect(result.inferenceDetails).toMatchObject({
+        method: "text_mention",
+        selectedSpeakerId: "char-b",
+      });
+      expect(result.responses[0]).toMatchObject({
+        inferenceMethod: "text_mention",
+      });
+    });
+
+    it("keeps explicit forced speaker precedence over inferred mention", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A forced", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B second", provider: "gemini", model: "gemini-test" });
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "ey B, responde primero",
+        undefined,
+        undefined,
+        { forcedSpeakerId: "char-a" }
+      );
+
+      expect(result.responses[0].speakerId).toBe("char-a");
+      expect(result.inferenceDetails).toMatchObject({
+        method: "explicit_forced",
+        selectedSpeakerId: "char-a",
+      });
+    });
+
+    it("falls back to configured next speaker when mention is ambiguous", async () => {
+      mockConversationFindOne.mockResolvedValue({
+        id: "conv-debate",
+        userId: "user-1",
+        character: CHARACTER_A,
+        secondaryCharacter: CHARACTER_B,
+        secondaryCharacterId: "char-b",
+        nextSpeakerId: "char-a",
+      });
+
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A fallback", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B fallback", provider: "gemini", model: "gemini-test" });
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "@A y @B, que opinan?"
+      );
+
+      expect(result.responses[0].speakerId).toBe("char-a");
+      expect(result.inferenceDetails).toMatchObject({
+        method: "fallback_next_speaker",
+        selectedSpeakerId: "char-a",
+      });
     });
   });
 });

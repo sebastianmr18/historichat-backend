@@ -99,6 +99,9 @@ export class ChatGateway {
       speaker_name: payload.speakerName,
       turn_order: payload.turnOrder,
       is_forced: payload.isForced ?? false,
+      inference_method: payload.inference_method,
+      detected_mention_text: payload.detected_mention_text,
+      mention_confidence: payload.mention_confidence,
       audio: payload.audio,
       warning: payload.warning,
     });
@@ -116,6 +119,9 @@ export class ChatGateway {
       reason_detail: payload.reasonDetail,
       confidence: payload.confidence,
       is_forced: payload.isForced ?? false,
+      inference_method: payload.inference_method,
+      detected_mention_text: payload.detected_mention_text,
+      mention_confidence: payload.mention_confidence,
     });
   }
 
@@ -126,6 +132,10 @@ export class ChatGateway {
       responses_count: payload.responsesCount,
       skips_count: payload.skipsCount,
       next_speaker_id: payload.nextSpeakerId,
+      inference_method: payload.inference_method,
+      selected_speaker_id: payload.selected_speaker_id,
+      detected_mention_text: payload.detected_mention_text,
+      mention_confidence: payload.mention_confidence,
       warnings: payload.warnings,
     });
   }
@@ -502,6 +512,9 @@ export class ChatGateway {
           turnOrder: payload.turnOrder,
           isForced: payload.isForced,
           audio: payload.audioBase64,
+          inference_method: payload.inferenceMethod,
+          detected_mention_text: payload.detectedMentionText,
+          mention_confidence: payload.mentionConfidence,
           warning: payload.warning,
         };
         this.emitDebateTurn(conversationId, turnPayload);
@@ -518,6 +531,9 @@ export class ChatGateway {
           reasonDetail: payload.reasonDetail,
           confidence: payload.confidence,
           isForced: payload.isForced,
+          inference_method: payload.inferenceMethod,
+          detected_mention_text: payload.detectedMentionText,
+          mention_confidence: payload.mentionConfidence,
         });
       },
       onRoundCompleted: (payload) => {
@@ -527,6 +543,10 @@ export class ChatGateway {
           responsesCount: payload.responsesCount,
           skipsCount: payload.skipsCount,
           nextSpeakerId: payload.nextSpeakerId,
+          inference_method: payload.inferenceDetails?.method,
+          selected_speaker_id: payload.inferenceDetails?.selectedSpeakerId,
+          detected_mention_text: payload.inferenceDetails?.mentionText,
+          mention_confidence: payload.inferenceDetails?.confidence,
           warnings: payload.warnings,
         });
       },

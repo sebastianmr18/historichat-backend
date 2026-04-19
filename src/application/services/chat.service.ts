@@ -5,6 +5,7 @@ import type { LlmProvider } from "../../infrastructure/ai/llm-provider.interface
 import {
   ChatResponse,
   ConversationMode,
+  DebateSpeakerInferenceDetails,
   DebateSkipReason,
   DebateProgressCallbacks,
   DebateTurnCharacterResult,
@@ -32,6 +33,7 @@ import type { ChatFlowErrorCode } from "../../domain/errors/chat-flow.error.js";
 import { ChatFlowError } from "../../domain/errors/chat-flow.error.js";
 import type { IRepository, IDataSource } from "../../domain/repositories/repository.interfaces.js";
 import { sanitizeAssistantOutput } from "../../shared/llm-output-sanitizer.js";
+import { detectDebateMentionedSpeaker } from "./speaker-mention-detector.js";
 
 interface DebateDecisionOutput {
   action: "respond" | "skip";
@@ -817,11 +819,56 @@ export class ChatService {
     const baseHistory = await this.loadConversationHistory(conversationId);
     const manualSkips = options?.manualSkips ?? {};
     const configuredNextSpeakerId = conversation.nextSpeakerId ?? conversation.preferredOpeningSpeakerId ?? speakerA.id;
+    const explicitForcedSpeakerId = options?.forcedSpeakerId ?? null;
+
+    let effectiveForcedSpeakerId: string | null = explicitForcedSpeakerId;
+    let inferenceDetails: DebateSpeakerInferenceDetails | undefined;
+
+    if (explicitForcedSpeakerId) {
+      inferenceDetails = {
+        method: "explicit_forced",
+        selectedSpeakerId: explicitForcedSpeakerId,
+      };
+    } else if (conversation.debateTurnMode === "manual") {
+      inferenceDetails = {
+        method: "manual_mode",
+        selectedSpeakerId: configuredNextSpeakerId,
+      };
+    } else {
+      const detectedSpeaker = detectDebateMentionedSpeaker({
+        userText,
+        speakerA,
+        speakerB,
+        minConfidence: env.DEBATE_SPEAKER_INFERENCE_THRESHOLD,
+      });
+
+      if (detectedSpeaker.speakerId) {
+        effectiveForcedSpeakerId = detectedSpeaker.speakerId;
+        inferenceDetails = {
+          method: "text_mention",
+          selectedSpeakerId: detectedSpeaker.speakerId,
+          mentionText: detectedSpeaker.mentionText,
+          confidence: detectedSpeaker.confidence,
+        };
+      } else {
+        inferenceDetails = {
+          method: "fallback_next_speaker",
+          selectedSpeakerId: configuredNextSpeakerId,
+        };
+      }
+    }
+
+    const inferenceTurnMetadata = {
+      inferenceMethod: inferenceDetails.method,
+      detectedMentionText: inferenceDetails.mentionText,
+      mentionConfidence: inferenceDetails.confidence,
+    };
+
     const plans = this.resolveDebatePlans(
       speakerA,
       speakerB,
       configuredNextSpeakerId,
-      options?.forcedSpeakerId ?? null
+      effectiveForcedSpeakerId
     );
 
     for (const manualSkipSpeakerId of Object.keys(manualSkips)) {
@@ -918,6 +965,7 @@ export class ChatService {
           reason: "manual_user",
           reasonDetail: manualSkipReason,
           isForced: plan.isForced,
+          ...inferenceTurnMetadata,
         });
         responses.push({
           messageId: skipMessage.id,
@@ -927,6 +975,7 @@ export class ChatService {
           skipReason: "manual_user",
           skipReasonDetail: manualSkipReason,
           isForced: plan.isForced,
+          ...inferenceTurnMetadata,
         });
         continue;
       }
@@ -1018,6 +1067,7 @@ export class ChatService {
           reasonDetail: skipDetail,
           confidence,
           isForced: plan.isForced,
+          ...inferenceTurnMetadata,
         });
         responses.push({
           messageId: skipMessage.id,
@@ -1028,6 +1078,7 @@ export class ChatService {
           skipReasonDetail: skipDetail,
           confidence,
           isForced: plan.isForced,
+          ...inferenceTurnMetadata,
         });
         continue;
       }
@@ -1080,6 +1131,7 @@ export class ChatService {
           reasonDetail: "No se obtuvo contenido conversacional valido.",
           confidence,
           isForced: plan.isForced,
+          ...inferenceTurnMetadata,
         });
         responses.push({
           messageId: skipMessage.id,
@@ -1090,6 +1142,7 @@ export class ChatService {
           skipReasonDetail: "No se obtuvo contenido conversacional valido.",
           confidence,
           isForced: plan.isForced,
+          ...inferenceTurnMetadata,
         });
         continue;
       }
@@ -1121,6 +1174,7 @@ export class ChatService {
         speakerName: plan.speaker.name,
         confidence,
         isForced: plan.isForced,
+        ...inferenceTurnMetadata,
       };
 
       if (env.DEBATE_TTS_ENABLED) {
@@ -1151,7 +1205,7 @@ export class ChatService {
       roundHistory.push({ role: "assistant", content: responseText });
     }
 
-    const nextSpeakerId = options?.forcedSpeakerId
+    const nextSpeakerId = effectiveForcedSpeakerId
       ? configuredNextSpeakerId
       : this.getNextSpeakerId(plans);
 
@@ -1173,6 +1227,7 @@ export class ChatService {
       responsesCount: responses.filter((r) => !r.skipped).length,
       skipsCount,
       nextSpeakerId,
+      inferenceDetails,
     });
 
     const nextSpeaker = nextSpeakerId === speakerB.id ? speakerB : speakerA;
@@ -1207,7 +1262,11 @@ export class ChatService {
       skipsCount,
       nextSpeakerId,
       suggestionsCount: suggestions?.length ?? 0,
-      forcedSpeakerId: options?.forcedSpeakerId ?? null,
+      forcedSpeakerId: explicitForcedSpeakerId,
+      effectiveForcedSpeakerId,
+      inferenceMethod: inferenceDetails.method,
+      mentionText: inferenceDetails.mentionText,
+      mentionConfidence: inferenceDetails.confidence,
     });
 
     return {
@@ -1217,6 +1276,7 @@ export class ChatService {
       responsesCount: responses.filter((r) => !r.skipped).length,
       skipsCount,
       nextSpeakerId,
+      inferenceDetails,
     };
   }
 }
