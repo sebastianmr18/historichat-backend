@@ -120,11 +120,12 @@ export class ChatService {
   }
 
   private async loadConversationHistory(conversationId: string, take = 6) {
-    return this.messageRepo.find({
+    const messages = await this.messageRepo.find({
       where: { conversationId },
       order: { timestamp: "ASC", id: "ASC" },
       take,
     });
+    return messages.filter((m) => m.role === "user" || m.role === "assistant");
   }
 
   private async synthesizeAndUpload(
@@ -882,8 +883,35 @@ export class ChatService {
 
       const manualSkipReason = manualSkips[plan.speaker.id];
       if (manualSkipReason != null) {
+        let skipMessage: Message;
+        try {
+          skipMessage = await this.dataSource.transaction(async (manager) => {
+            return manager.save(Message, {
+              conversationId,
+              role: "event",
+              content: "",
+              speakerCharacterId: plan.speaker.id,
+              eventType: "debate_turn_skip",
+              eventMetaJson: {
+                reason: "manual_user",
+                reasonDetail: manualSkipReason,
+                turnOrder: plan.turnOrder,
+                isForced: plan.isForced,
+              },
+            });
+          });
+          persistedMessageIds.push(skipMessage.id);
+        } catch (error) {
+          await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
+          throw this.toChatFlowError(
+            error,
+            "AI_RESPONSE_FAILED",
+            `No se pudo persistir skip manual del personaje ${plan.speaker.name}`
+          );
+        }
         skipsCount += 1;
         callbacks?.onTurnSkipped({
+          messageId: skipMessage.id,
           speakerId: plan.speaker.id,
           speakerName: plan.speaker.name,
           turnOrder: plan.turnOrder,
@@ -892,6 +920,7 @@ export class ChatService {
           isForced: plan.isForced,
         });
         responses.push({
+          messageId: skipMessage.id,
           speakerId: plan.speaker.id,
           speakerName: plan.speaker.name,
           skipped: true,
@@ -952,8 +981,36 @@ export class ChatService {
           : decision?.skipReason ?? "unknown";
         const skipDetail = decision?.reason ?? "Sin contexto suficiente para responder con calidad.";
 
+        let skipMessage: Message;
+        try {
+          skipMessage = await this.dataSource.transaction(async (manager) => {
+            return manager.save(Message, {
+              conversationId,
+              role: "event",
+              content: "",
+              speakerCharacterId: plan.speaker.id,
+              eventType: "debate_turn_skip",
+              eventMetaJson: {
+                reason: skipReason,
+                reasonDetail: skipDetail,
+                confidence,
+                turnOrder: plan.turnOrder,
+                isForced: plan.isForced,
+              },
+            });
+          });
+          persistedMessageIds.push(skipMessage.id);
+        } catch (error) {
+          await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
+          throw this.toChatFlowError(
+            error,
+            "AI_RESPONSE_FAILED",
+            `No se pudo persistir skip automático del personaje ${plan.speaker.name}`
+          );
+        }
         skipsCount += 1;
         callbacks?.onTurnSkipped({
+          messageId: skipMessage.id,
           speakerId: plan.speaker.id,
           speakerName: plan.speaker.name,
           turnOrder: plan.turnOrder,
@@ -963,6 +1020,7 @@ export class ChatService {
           isForced: plan.isForced,
         });
         responses.push({
+          messageId: skipMessage.id,
           speakerId: plan.speaker.id,
           speakerName: plan.speaker.name,
           skipped: true,
@@ -985,8 +1043,36 @@ export class ChatService {
       }
 
       if (!responseText) {
+        let skipMessage: Message;
+        try {
+          skipMessage = await this.dataSource.transaction(async (manager) => {
+            return manager.save(Message, {
+              conversationId,
+              role: "event",
+              content: "",
+              speakerCharacterId: plan.speaker.id,
+              eventType: "debate_turn_skip",
+              eventMetaJson: {
+                reason: "unknown",
+                reasonDetail: "No se obtuvo contenido conversacional valido.",
+                confidence,
+                turnOrder: plan.turnOrder,
+                isForced: plan.isForced,
+              },
+            });
+          });
+          persistedMessageIds.push(skipMessage.id);
+        } catch (error) {
+          await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
+          throw this.toChatFlowError(
+            error,
+            "AI_RESPONSE_FAILED",
+            `No se pudo persistir skip vacío del personaje ${plan.speaker.name}`
+          );
+        }
         skipsCount += 1;
         callbacks?.onTurnSkipped({
+          messageId: skipMessage.id,
           speakerId: plan.speaker.id,
           speakerName: plan.speaker.name,
           turnOrder: plan.turnOrder,
@@ -996,6 +1082,7 @@ export class ChatService {
           isForced: plan.isForced,
         });
         responses.push({
+          messageId: skipMessage.id,
           speakerId: plan.speaker.id,
           speakerName: plan.speaker.name,
           skipped: true,

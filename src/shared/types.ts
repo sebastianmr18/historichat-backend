@@ -138,6 +138,7 @@ export interface DebateTurnPayload {
 export interface DebateTurnSkippedPayload {
   conversationId: string;
   traceId: string;
+  messageId: number;
   speakerId: string;
   speakerName: string;
   turnOrder: DebateTurnOrder;
@@ -171,6 +172,7 @@ export interface DebateProgressCallbacks {
   }): void;
   onTurnReady(payload: DebateTurnCharacterResult & { turnOrder: DebateTurnOrder }): void;
   onTurnSkipped(payload: {
+    messageId: number;
     speakerId: string;
     speakerName: string;
     turnOrder: DebateTurnOrder;

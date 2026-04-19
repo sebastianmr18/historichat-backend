@@ -724,5 +724,145 @@ describe("ChatService", () => {
 
       expect(mockMessageDelete).not.toHaveBeenCalled();
     });
+
+    it("persists a skip event message and passes messageId to onTurnSkipped for manual skip", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "B responds", provider: "gemini", model: "gemini-test" });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "Skip A manually",
+        undefined,
+        callbacks,
+        { manualSkips: { "char-a": "No quiero que responda A" } }
+      );
+
+      // onTurnSkipped must be called with a persisted messageId
+      expect(callbacks.onTurnSkipped).toHaveBeenCalledTimes(1);
+      expect(callbacks.onTurnSkipped.mock.calls[0][0]).toMatchObject({
+        reason: "manual_user",
+        reasonDetail: "No quiero que responda A",
+        speakerId: "char-a",
+      });
+      expect(callbacks.onTurnSkipped.mock.calls[0][0].messageId).toBeDefined();
+      expect(typeof callbacks.onTurnSkipped.mock.calls[0][0].messageId).toBe("number");
+
+      // The skip also lives in responses
+      const skipResponse = result.responses.find((r) => r.speakerId === "char-a");
+      expect(skipResponse?.skipped).toBe(true);
+      expect(skipResponse?.messageId).toBeDefined();
+
+      // Skip event message saved with role="event" and eventType="debate_turn_skip"
+      expect(mockTransactionSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: "event",
+          eventType: "debate_turn_skip",
+          speakerCharacterId: "char-a",
+        })
+      );
+
+      expect(result.skipsCount).toBe(1);
+      expect(result.responsesCount).toBe(1);
+    });
+
+    it("persists skip event message for auto_low_confidence skip and passes messageId to callback", async () => {
+      // LLM returns a skip decision with low confidence
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({
+          text: "",
+          provider: "gemini",
+          model: "gemini-test",
+          structuredOutput: {
+            action: "skip",
+            confidence: 0.1,
+            skipReason: "auto_low_confidence",
+            reason: "No tengo contexto suficiente",
+          },
+        })
+        .mockResolvedValueOnce({ text: "B responds ok", provider: "gemini", model: "gemini-test" });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "Auto skip A",
+        undefined,
+        callbacks
+      );
+
+      expect(callbacks.onTurnSkipped).toHaveBeenCalledTimes(1);
+      const skippedPayload = callbacks.onTurnSkipped.mock.calls[0][0];
+      expect(skippedPayload.messageId).toBeDefined();
+      expect(typeof skippedPayload.messageId).toBe("number");
+      expect(skippedPayload.speakerId).toBe("char-a");
+
+      expect(mockTransactionSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: "event",
+          eventType: "debate_turn_skip",
+          speakerCharacterId: "char-a",
+        })
+      );
+
+      expect(result.skipsCount).toBe(1);
+    });
+
+    it("includes skip event message IDs in cleanup when speaker B generation fails after manual skip of A", async () => {
+      mockGemini.generateResponse
+        .mockRejectedValueOnce(new Error("LLM down for B"));
+
+      await expect(
+        service.processDebateMessage(
+          "conv-debate",
+          "user-1",
+          "Skip A then B fails",
+          undefined,
+          undefined,
+          { manualSkips: { "char-a": "skip" } }
+        )
+      ).rejects.toThrow();
+
+      // Messages: user(id=1), skipA(id=2) → cleanup should include both
+      expect(mockMessageDelete).toHaveBeenCalledTimes(1);
+      expect(mockMessageDelete).toHaveBeenCalledWith([1, 2]);
+    });
+
+    it("filters event-role messages from LLM history in loadConversationHistory", async () => {
+      // Simulate that DB returns a mix of user, assistant, and event messages
+      mockMessageFind.mockResolvedValueOnce([
+        { id: 1, role: "user", content: "hello", conversationId: "conv-debate" },
+        { id: 2, role: "assistant", content: "world", conversationId: "conv-debate" },
+        { id: 3, role: "event", content: "", conversationId: "conv-debate", eventType: "debate_turn_skip" },
+      ]);
+
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A says", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B says", provider: "gemini", model: "gemini-test" });
+
+      await service.processDebateMessage("conv-debate", "user-1", "Test history filter");
+
+      // All LLM calls should use a history that excludes event-role messages
+      for (const call of mockGemini.generateResponse.mock.calls) {
+        const historyArg = call[1] as any[];
+        if (!Array.isArray(historyArg)) continue;
+        expect(historyArg.every((m: any) => m.role !== "event")).toBe(true);
+      }
+    });
   });
 });

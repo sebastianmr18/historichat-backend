@@ -108,6 +108,7 @@ export class ChatGateway {
     this.io.to(conversationId).emit("debate_turn_skipped", {
       conversationId: payload.conversationId,
       traceId: payload.traceId,
+      message_id: payload.messageId,
       speaker_id: payload.speakerId,
       speaker_name: payload.speakerName,
       turn_order: payload.turnOrder,
@@ -509,6 +510,7 @@ export class ChatGateway {
         this.emitDebateTurnSkipped(conversationId, {
           conversationId,
           traceId,
+          messageId: payload.messageId,
           speakerId: payload.speakerId,
           speakerName: payload.speakerName,
           turnOrder: payload.turnOrder,
