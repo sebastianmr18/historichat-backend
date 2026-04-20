@@ -1,14 +1,34 @@
-import { describe, it, expect, beforeAll, vi } from "vitest";
-import { Request, Response } from "express";
-import { ProfileController } from "../profile.controller.js";
-import { AppDataSource } from "../../../config/database.js";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import type { Request, Response } from "express";
 import { Profile } from "../../../infrastructure/database/entities/Profile.js";
 
-describe("ProfileController", () => {
-  let controller: ProfileController;
+const getRepository = vi.fn();
 
-  beforeAll(() => {
+vi.mock("../../../config/database.js", () => ({
+  AppDataSource: {
+    getRepository,
+  },
+}));
+
+vi.mock("../../../infrastructure/logging/logger.js", () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+describe("ProfileController", () => {
+  let controller: InstanceType<typeof import("../profile.controller.js").ProfileController>;
+
+  beforeAll(async () => {
+    const { ProfileController } = await import("../profile.controller.js");
     controller = new ProfileController();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   describe("getMe", () => {
@@ -43,7 +63,7 @@ describe("ProfileController", () => {
         findOne: vi.fn().mockResolvedValue(null),
       };
 
-      vi.spyOn(AppDataSource, "getRepository").mockReturnValue(mockRepository as any);
+      getRepository.mockReturnValue(mockRepository as any);
 
       await controller.getMe(req, res);
 
@@ -72,7 +92,7 @@ describe("ProfileController", () => {
         findOne: vi.fn().mockResolvedValue(mockProfile),
       };
 
-      vi.spyOn(AppDataSource, "getRepository").mockReturnValue(mockRepository as any);
+      getRepository.mockReturnValue(mockRepository as any);
 
       await controller.getMe(req, res);
 
@@ -100,7 +120,7 @@ describe("ProfileController", () => {
         findOne: vi.fn().mockRejectedValue(new Error("Database error")),
       };
 
-      vi.spyOn(AppDataSource, "getRepository").mockReturnValue(mockRepository as any);
+      getRepository.mockReturnValue(mockRepository as any);
 
       await controller.getMe(req, res);
 
