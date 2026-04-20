@@ -7,6 +7,10 @@ import { AppDataSource } from './config/database.js';
 import { logger } from './infrastructure/logging/logger.js';
 
 import { GeminiService } from './infrastructure/ai/gemini.service.js';
+import { GroqService } from './infrastructure/ai/groq.service.js';
+import { LlmOrchestratorService } from './infrastructure/ai/llm-orchestrator.service.js';
+import type { LlmProvider } from './infrastructure/ai/llm-provider.interface.js';
+import { OpenRouterService } from './infrastructure/ai/openrouter.service.js';
 import { GoogleCloudVoiceAdapter } from './infrastructure/ai/google-cloud-voice.adapter.js';
 import { ChromaRepository } from './infrastructure/vector/chroma.repository.js';
 import { ChatService } from './application/services/chat.service.js';
@@ -19,17 +23,60 @@ import { Conversation } from './infrastructure/database/entities/Conversation.js
 import { Message } from './infrastructure/database/entities/Message.js';
 import { Character } from './infrastructure/database/entities/Character.js';
 
+const buildLlmProviders = (): LlmProvider[] => {
+  const availableProviders = new Map<string, LlmProvider>();
+
+  availableProviders.set('gemini', new GeminiService());
+
+  if (env.GROQ_API_KEY) {
+    availableProviders.set('groq', new GroqService());
+  }
+
+  if (env.OPENROUTER_API_KEY) {
+    availableProviders.set('openrouter', new OpenRouterService());
+  }
+
+  const orderedNames = env.LLM_FALLBACK_ORDER
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value.length > 0);
+
+  const orderedProviders: LlmProvider[] = [];
+  for (const name of orderedNames) {
+    const provider = availableProviders.get(name);
+    if (!provider) {
+      continue;
+    }
+
+    orderedProviders.push(provider);
+    availableProviders.delete(name);
+  }
+
+  for (const provider of availableProviders.values()) {
+    orderedProviders.push(provider);
+  }
+
+  logger.info('[server] llm_providers_configured', {
+    providers: orderedProviders.map((provider) => ({
+      name: provider.providerName,
+      model: provider.modelName,
+    })),
+  });
+
+  return orderedProviders;
+};
+
 const startServer = async () => {
   try {
     await AppDataSource.initialize();
     logger.info("Conexión a PostgreSQL (TypeORM) establecida");
 
-    const geminiService = new GeminiService();
+    const llmService = new LlmOrchestratorService(buildLlmProviders());
     const googleCloudVoiceAdapter = new GoogleCloudVoiceAdapter();
     const chromaRepo = new ChromaRepository();
 
     const chatService = new ChatService(
-      geminiService,
+      llmService,
       googleCloudVoiceAdapter,
       chromaRepo,
       storageService,

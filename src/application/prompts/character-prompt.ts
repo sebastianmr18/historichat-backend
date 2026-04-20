@@ -1,5 +1,3 @@
-import { Character } from "../../infrastructure/database/entities/Character.js";
+import { buildBaseCharacterPrompt } from "./prompt-base.js";
 
-export function buildSystemPrompt(character: Character): string {
-  return `Actúa como ${character.name}. Rol: ${character.role}. Bio: ${character.biography}. Responde en maximo 20 palabras.`;
-}
+export { buildBaseCharacterPrompt };

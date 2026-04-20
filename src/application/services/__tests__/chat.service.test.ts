@@ -8,7 +8,11 @@ import { ChatFlowError } from "../../../domain/errors/chat-flow.error.js";
 
 function createMockGemini() {
   return {
-    generateResponse: vi.fn().mockResolvedValue("AI response text"),
+    generateResponse: vi.fn().mockResolvedValue({
+      text: "AI response text",
+      provider: "gemini",
+      model: "gemini-test",
+    }),
   };
 }
 
@@ -63,6 +67,7 @@ const CHARACTER_B = {
 
 const mockMessageFind = vi.fn().mockResolvedValue([]);
 const mockMessageUpdate = vi.fn().mockResolvedValue({ affected: 1 });
+const mockMessageDelete = vi.fn().mockResolvedValue({ affected: 1 });
 const mockConversationFindOne = vi.fn();
 
 const mockTransactionSave = vi.fn();
@@ -72,18 +77,19 @@ function createMockConversationRepo() {
 }
 
 function createMockMessageRepo() {
-  return { find: mockMessageFind, findOne: vi.fn(), create: vi.fn(), save: vi.fn(), update: mockMessageUpdate, delete: vi.fn() };
+  return { find: mockMessageFind, findOne: vi.fn(), create: vi.fn(), save: vi.fn(), update: mockMessageUpdate, delete: mockMessageDelete };
 }
+
+let globalSaveCounter = 0;
 
 function createMockDataSource() {
   return {
     transaction: vi.fn(async (cb: any) => {
-      let callCount = 0;
       const manager = {
         save: vi.fn(async (_entity: any, data: any) => {
-          callCount++;
+          globalSaveCounter++;
           mockTransactionSave(data);
-          return { id: callCount, ...data };
+          return { id: globalSaveCounter, ...data };
         }),
       };
       return cb(manager);
@@ -104,11 +110,13 @@ vi.mock("../../../config/env.js", () => ({
   env: {
     SUPABASE_STORAGE_BUCKET: "test-bucket",
     DEBATE_TTS_ENABLED: true,
+    DEBATE_SKIP_CONFIDENCE_THRESHOLD: 0.35,
+    DEBATE_SPEAKER_INFERENCE_THRESHOLD: 0.7,
   },
 }));
 
-vi.mock("../../prompts/character-prompt.js", () => ({
-  buildSystemPrompt: vi.fn().mockReturnValue("system prompt"),
+vi.mock("../../prompts/system-prompt-builder.js", () => ({
+  buildModeSystemPrompt: vi.fn().mockReturnValue("system prompt"),
 }));
 
 // ---------------------------------------------------------------------------
@@ -124,6 +132,7 @@ describe("ChatService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    globalSaveCounter = 0;
 
     mockGemini = createMockGemini();
     mockVoice = createMockVoice();
@@ -164,6 +173,37 @@ describe("ChatService", () => {
       expect(result.speakerName).toBe("Character A");
       expect(result.audioBase64).toBeDefined();
       expect(result.messageId).toBeDefined();
+    });
+
+    it("unwraps JSON envelope and keeps only conversational text", async () => {
+      mockGemini.generateResponse.mockResolvedValueOnce({
+        text: JSON.stringify({
+          action: "respond",
+          text: "Texto limpio para el usuario",
+          confidence: 1,
+        }),
+        provider: "openrouter",
+        model: "openrouter-test",
+      });
+
+      const result = await service.processTextMessage("conv-1", "user-1", "Hello");
+
+      expect(result.text).toBe("Texto limpio para el usuario");
+      expect(mockTransactionSave).toHaveBeenCalledWith(
+        expect.objectContaining({ role: "assistant", content: "Texto limpio para el usuario" })
+      );
+    });
+
+    it("throws ChatFlowError when the assistant output is code-like", async () => {
+      mockGemini.generateResponse.mockResolvedValueOnce({
+        text: "```ts\nconst x = 1;\n```",
+        provider: "openrouter",
+        model: "openrouter-test",
+      });
+
+      await expect(
+        service.processTextMessage("conv-1", "user-1", "Hello")
+      ).rejects.toMatchObject({ code: "AI_RESPONSE_FAILED" });
     });
 
     it("throws ChatFlowError when conversation is not found", async () => {
@@ -289,6 +329,58 @@ describe("ChatService", () => {
   });
 
   // -------------------------------------------------------------------------
+  // processDebateAudioMessage
+  // -------------------------------------------------------------------------
+
+  describe("processDebateAudioMessage", () => {
+    beforeEach(() => {
+      mockConversationFindOne.mockResolvedValue({
+        id: "conv-debate",
+        userId: "user-1",
+        character: CHARACTER_A,
+        secondaryCharacter: CHARACTER_B,
+        secondaryCharacterId: "char-b",
+      });
+    });
+
+    it("throws ChatFlowError with NO_SPEECH when debate audio transcription is empty", async () => {
+      mockVoice.transcribe.mockResolvedValue("   ");
+
+      await expect(
+        service.processDebateAudioMessage({
+          conversationId: "conv-debate",
+          userId: "user-1",
+          audioBuffer: Buffer.from("silence"),
+          mimeType: "audio/webm",
+        })
+      ).rejects.toMatchObject({ code: "NO_SPEECH" });
+    });
+
+    it("persists user audio metadata when debate audio is transcribed successfully", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "Response from A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "Response from B", provider: "gemini", model: "gemini-test" });
+
+      await service.processDebateAudioMessage({
+        conversationId: "conv-debate",
+        userId: "user-1",
+        audioBuffer: Buffer.from("audio"),
+        mimeType: "audio/webm",
+      });
+
+      expect(mockTransactionSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: "user",
+          content: "transcribed text",
+          mediaType: "audio/webm",
+          audioPath: "uploaded/path.mp3",
+          audioStorageId: "uploaded/path.mp3",
+        })
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // processDebateMessage
   // -------------------------------------------------------------------------
 
@@ -305,8 +397,8 @@ describe("ChatService", () => {
 
     it("generates responses from both characters", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce("Response from A")
-        .mockResolvedValueOnce("Response from B");
+        .mockResolvedValueOnce({ text: "Response from A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "Response from B", provider: "gemini", model: "gemini-test" });
 
       const result = await service.processDebateMessage("conv-debate", "user-1", "Discuss ethics");
 
@@ -334,32 +426,514 @@ describe("ChatService", () => {
 
     it("calls generateAiResponse for speaker B with speaker A's response in history", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce("A says hello")
-        .mockResolvedValueOnce("B replies");
+        .mockResolvedValueOnce({ text: "A says hello", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B replies", provider: "gemini", model: "gemini-test" });
 
       await service.processDebateMessage("conv-debate", "user-1", "Start");
 
-      // Second call should include speaker A's response in the history
-      const secondCallHistory = mockGemini.generateResponse.mock.calls[1];
+      // Second Gemini call corresponds to speaker B main response.
+      const speakerBMainCall = mockGemini.generateResponse.mock.calls[1];
       // Args: (systemPrompt, history, userText, context)
       // history is the 2nd argument
-      expect(secondCallHistory[1]).toEqual(
+      expect(speakerBMainCall[1]).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ role: "assistant", content: "A says hello" }),
         ])
       );
     });
 
+    it("emits debate suggestions through callback after round completion", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({
+          text: "",
+          provider: "gemini",
+          model: "gemini-test",
+          structuredOutput: {
+            suggestions: ["Pide evidencia concreta", "Solicita una refutacion", "Abre una nueva arista"],
+          },
+        });
+
+      const callOrder: string[] = [];
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(() => callOrder.push("userAck")),
+        onTyping: vi.fn((p: any) => callOrder.push(`typing_${p.turnOrder}`)),
+        onTurnReady: vi.fn((p: any) => callOrder.push(`turn_${p.turnOrder}`)),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(() => callOrder.push("roundComplete")),
+        onSuggestionsReady: vi.fn(() => callOrder.push("suggestions")),
+      };
+
+      await service.processDebateMessage("conv-debate", "user-1", "Debatamos", undefined, callbacks);
+
+      expect(callbacks.onSuggestionsReady).toHaveBeenCalledTimes(1);
+      expect(callbacks.onSuggestionsReady).toHaveBeenCalledWith({
+        suggestions: ["Pide evidencia concreta", "Solicita una refutacion", "Abre una nueva arista"],
+      });
+      expect(callOrder).toEqual([
+        "userAck",
+        "typing_A",
+        "turn_A",
+        "typing_B",
+        "turn_B",
+        "roundComplete",
+        "suggestions",
+      ]);
+    });
+
+    it("completes debate round even when suggestions generation fails", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" })
+        .mockRejectedValueOnce(new Error("Suggestions down"));
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+        onSuggestionsReady: vi.fn(),
+      };
+
+      const result = await service.processDebateMessage("conv-debate", "user-1", "Debatamos", undefined, callbacks);
+
+      expect(result.responses).toHaveLength(2);
+      expect(callbacks.onRoundCompleted).toHaveBeenCalledTimes(1);
+      expect(callbacks.onSuggestionsReady).not.toHaveBeenCalled();
+    });
+
     it("synthesizes audio for both speakers when DEBATE_TTS_ENABLED", async () => {
       mockGemini.generateResponse
-        .mockResolvedValueOnce("A speaks")
-        .mockResolvedValueOnce("B speaks");
+        .mockResolvedValueOnce({ text: "A speaks", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B speaks", provider: "gemini", model: "gemini-test" });
 
       const result = await service.processDebateMessage("conv-debate", "user-1", "Debate!");
 
       expect(mockVoice.synthesize).toHaveBeenCalledTimes(2);
       expect(result.responses[0].audioBase64).toBeDefined();
       expect(result.responses[1].audioBase64).toBeDefined();
+    });
+
+    it("invokes onUserMessagePersisted callback after persisting user message", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      await service.processDebateMessage("conv-debate", "user-1", "Hello debate", undefined, callbacks);
+
+      expect(callbacks.onUserMessagePersisted).toHaveBeenCalledTimes(1);
+      expect(callbacks.onUserMessagePersisted).toHaveBeenCalledWith(
+        expect.objectContaining({ userText: "Hello debate" })
+      );
+      expect(callbacks.onUserMessagePersisted.mock.calls[0][0].userMessageId).toBeDefined();
+    });
+
+    it("invokes onTyping for A before onTurnReady for A, and onTyping for B before onTurnReady for B", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A response", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B response", provider: "gemini", model: "gemini-test" });
+
+      const callOrder: string[] = [];
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(() => callOrder.push("userAck")),
+        onTyping: vi.fn((p: any) => callOrder.push(`typing_${p.turnOrder}`)),
+        onTurnReady: vi.fn((p: any) => callOrder.push(`turn_${p.turnOrder}`)),
+        onTurnSkipped: vi.fn((p: any) => callOrder.push(`skip_${p.turnOrder}`)),
+        onRoundCompleted: vi.fn(() => callOrder.push("roundComplete")),
+      };
+
+      await service.processDebateMessage("conv-debate", "user-1", "Go", undefined, callbacks);
+
+      expect(callOrder).toEqual([
+        "userAck",
+        "typing_A",
+        "turn_A",
+        "typing_B",
+        "turn_B",
+        "roundComplete",
+      ]);
+    });
+
+    it("includes turnOrder in onTurnReady callbacks", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      await service.processDebateMessage("conv-debate", "user-1", "Go", undefined, callbacks);
+
+      expect(callbacks.onTurnReady).toHaveBeenCalledTimes(2);
+      expect(callbacks.onTurnReady.mock.calls[0][0]).toMatchObject({
+        speakerId: "char-a",
+        turnOrder: "A",
+      });
+      expect(callbacks.onTurnReady.mock.calls[1][0]).toMatchObject({
+        speakerId: "char-b",
+        turnOrder: "B",
+      });
+    });
+
+    it("attaches TTS warning in onTurnReady when TTS fails for a speaker", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A with audio", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B no audio", provider: "gemini", model: "gemini-test" });
+
+      mockVoice.synthesize
+        .mockResolvedValueOnce(Buffer.from("audio-a"))
+        .mockRejectedValueOnce(new Error("TTS failed for B"));
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      const result = await service.processDebateMessage("conv-debate", "user-1", "Go", undefined, callbacks);
+
+      // Speaker A should have audio
+      expect(callbacks.onTurnReady.mock.calls[0][0].audioBase64).toBeDefined();
+      expect(callbacks.onTurnReady.mock.calls[0][0].warning).toBeUndefined();
+
+      // Speaker B should have warning, no audio
+      expect(callbacks.onTurnReady.mock.calls[1][0].audioBase64).toBeUndefined();
+      expect(callbacks.onTurnReady.mock.calls[1][0].warning).toMatchObject({ code: "TTS_FAILED" });
+
+      // onRoundCompleted should include the warning
+      expect(callbacks.onRoundCompleted.mock.calls[0][0].warnings).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: "TTS_FAILED" })])
+      );
+
+      // Result should also reflect the warning
+      expect(result.responses[1].warning).toMatchObject({ code: "TTS_FAILED" });
+    });
+
+    it("does not emit partial events when conversation is not in debate mode", async () => {
+      mockConversationFindOne.mockResolvedValue({
+        id: "conv-single",
+        userId: "user-1",
+        character: CHARACTER_A,
+        secondaryCharacter: null,
+        secondaryCharacterId: null,
+      });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      await expect(
+        service.processDebateMessage("conv-single", "user-1", "Hello", undefined, callbacks)
+      ).rejects.toMatchObject({ code: "DEBATE_NOT_AVAILABLE" });
+
+      expect(callbacks.onUserMessagePersisted).not.toHaveBeenCalled();
+      expect(callbacks.onTyping).not.toHaveBeenCalled();
+      expect(callbacks.onTurnReady).not.toHaveBeenCalled();
+      expect(callbacks.onTurnSkipped).not.toHaveBeenCalled();
+      expect(callbacks.onRoundCompleted).not.toHaveBeenCalled();
+    });
+
+    it("works correctly without callbacks (backward compatible)", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B", provider: "gemini", model: "gemini-test" });
+
+      const result = await service.processDebateMessage("conv-debate", "user-1", "No callbacks");
+
+      expect(result.responses).toHaveLength(2);
+      expect(result.userText).toBe("No callbacks");
+    });
+
+    it("cleans up persisted messages when Speaker A generation fails", async () => {
+      mockGemini.generateResponse
+        .mockRejectedValueOnce(new Error("LLM down for A"));
+
+      await expect(
+        service.processDebateMessage("conv-debate", "user-1", "Fail A")
+      ).rejects.toThrow();
+
+      // User message was persisted (id=1), then A failed → cleanup should delete [1]
+      expect(mockMessageDelete).toHaveBeenCalledTimes(1);
+      expect(mockMessageDelete).toHaveBeenCalledWith([1]);
+    });
+
+    it("cleans up persisted messages when Speaker B generation fails after A succeeded", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A ok", provider: "gemini", model: "gemini-test" })
+        .mockRejectedValueOnce(new Error("LLM down for B"));
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      await expect(
+        service.processDebateMessage("conv-debate", "user-1", "Fail B", undefined, callbacks)
+      ).rejects.toThrow();
+
+      // User message (id=1) and speaker A message (id=2) were persisted → cleanup deletes both
+      expect(mockMessageDelete).toHaveBeenCalledTimes(1);
+      expect(mockMessageDelete).toHaveBeenCalledWith([1, 2]);
+
+      // Speaker A turn was emitted before B failed
+      expect(callbacks.onTurnReady).toHaveBeenCalledTimes(1);
+      expect(callbacks.onTurnReady.mock.calls[0][0]).toMatchObject({
+        speakerId: "char-a",
+        turnOrder: "A",
+      });
+
+      // Round should NOT have completed
+      expect(callbacks.onRoundCompleted).not.toHaveBeenCalled();
+    });
+
+    it("does not call cleanup when no messages were persisted (pre-validation failure)", async () => {
+      mockConversationFindOne.mockResolvedValue({
+        id: "conv-single",
+        userId: "user-1",
+        character: CHARACTER_A,
+        secondaryCharacter: null,
+        secondaryCharacterId: null,
+      });
+
+      await expect(
+        service.processDebateMessage("conv-single", "user-1", "Hello")
+      ).rejects.toMatchObject({ code: "DEBATE_NOT_AVAILABLE" });
+
+      expect(mockMessageDelete).not.toHaveBeenCalled();
+    });
+
+    it("persists a skip event message and passes messageId to onTurnSkipped for manual skip", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "B responds", provider: "gemini", model: "gemini-test" });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "Skip A manually",
+        undefined,
+        callbacks,
+        { manualSkips: { "char-a": "No quiero que responda A" } }
+      );
+
+      // onTurnSkipped must be called with a persisted messageId
+      expect(callbacks.onTurnSkipped).toHaveBeenCalledTimes(1);
+      expect(callbacks.onTurnSkipped.mock.calls[0][0]).toMatchObject({
+        reason: "manual_user",
+        reasonDetail: "No quiero que responda A",
+        speakerId: "char-a",
+      });
+      expect(callbacks.onTurnSkipped.mock.calls[0][0].messageId).toBeDefined();
+      expect(typeof callbacks.onTurnSkipped.mock.calls[0][0].messageId).toBe("number");
+
+      // The skip also lives in responses
+      const skipResponse = result.responses.find((r) => r.speakerId === "char-a");
+      expect(skipResponse?.skipped).toBe(true);
+      expect(skipResponse?.messageId).toBeDefined();
+
+      // Skip event message saved with role="event" and eventType="debate_turn_skip"
+      expect(mockTransactionSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: "event",
+          eventType: "debate_turn_skip",
+          speakerCharacterId: "char-a",
+        })
+      );
+
+      expect(result.skipsCount).toBe(1);
+      expect(result.responsesCount).toBe(1);
+    });
+
+    it("persists skip event message for auto_low_confidence skip and passes messageId to callback", async () => {
+      // LLM returns a skip decision with low confidence
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({
+          text: "",
+          provider: "gemini",
+          model: "gemini-test",
+          structuredOutput: {
+            action: "skip",
+            confidence: 0.1,
+            skipReason: "auto_low_confidence",
+            reason: "No tengo contexto suficiente",
+          },
+        })
+        .mockResolvedValueOnce({ text: "B responds ok", provider: "gemini", model: "gemini-test" });
+
+      const callbacks = {
+        onUserMessagePersisted: vi.fn(),
+        onTyping: vi.fn(),
+        onTurnReady: vi.fn(),
+        onTurnSkipped: vi.fn(),
+        onRoundCompleted: vi.fn(),
+      };
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "Auto skip A",
+        undefined,
+        callbacks
+      );
+
+      expect(callbacks.onTurnSkipped).toHaveBeenCalledTimes(1);
+      const skippedPayload = callbacks.onTurnSkipped.mock.calls[0][0];
+      expect(skippedPayload.messageId).toBeDefined();
+      expect(typeof skippedPayload.messageId).toBe("number");
+      expect(skippedPayload.speakerId).toBe("char-a");
+
+      expect(mockTransactionSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: "event",
+          eventType: "debate_turn_skip",
+          speakerCharacterId: "char-a",
+        })
+      );
+
+      expect(result.skipsCount).toBe(1);
+    });
+
+    it("includes skip event message IDs in cleanup when speaker B generation fails after manual skip of A", async () => {
+      mockGemini.generateResponse
+        .mockRejectedValueOnce(new Error("LLM down for B"));
+
+      await expect(
+        service.processDebateMessage(
+          "conv-debate",
+          "user-1",
+          "Skip A then B fails",
+          undefined,
+          undefined,
+          { manualSkips: { "char-a": "skip" } }
+        )
+      ).rejects.toThrow();
+
+      // Messages: user(id=1), skipA(id=2) → cleanup should include both
+      expect(mockMessageDelete).toHaveBeenCalledTimes(1);
+      expect(mockMessageDelete).toHaveBeenCalledWith([1, 2]);
+    });
+
+    it("filters event-role messages from LLM history in loadConversationHistory", async () => {
+      // Simulate that DB returns a mix of user, assistant, and event messages
+      mockMessageFind.mockResolvedValueOnce([
+        { id: 1, role: "user", content: "hello", conversationId: "conv-debate" },
+        { id: 2, role: "assistant", content: "world", conversationId: "conv-debate" },
+        { id: 3, role: "event", content: "", conversationId: "conv-debate", eventType: "debate_turn_skip" },
+      ]);
+
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A says", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B says", provider: "gemini", model: "gemini-test" });
+
+      await service.processDebateMessage("conv-debate", "user-1", "Test history filter");
+
+      // All LLM calls should use a history that excludes event-role messages
+      for (const call of mockGemini.generateResponse.mock.calls) {
+        const historyArg = call[1] as any[];
+        if (!Array.isArray(historyArg)) continue;
+        expect(historyArg.every((m: any) => m.role !== "event")).toBe(true);
+      }
+    });
+
+    it("infers speaker B first when user explicitly addresses B", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "B first", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "A second", provider: "gemini", model: "gemini-test" });
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "ey B, que opinas de esto?"
+      );
+
+      expect(result.responses[0].speakerId).toBe("char-b");
+      expect(result.responses[1].speakerId).toBe("char-a");
+      expect(result.inferenceDetails).toMatchObject({
+        method: "text_mention",
+        selectedSpeakerId: "char-b",
+      });
+      expect(result.responses[0]).toMatchObject({
+        inferenceMethod: "text_mention",
+      });
+    });
+
+    it("keeps explicit forced speaker precedence over inferred mention", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A forced", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B second", provider: "gemini", model: "gemini-test" });
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "ey B, responde primero",
+        undefined,
+        undefined,
+        { forcedSpeakerId: "char-a" }
+      );
+
+      expect(result.responses[0].speakerId).toBe("char-a");
+      expect(result.inferenceDetails).toMatchObject({
+        method: "explicit_forced",
+        selectedSpeakerId: "char-a",
+      });
+    });
+
+    it("falls back to configured next speaker when mention is ambiguous", async () => {
+      mockConversationFindOne.mockResolvedValue({
+        id: "conv-debate",
+        userId: "user-1",
+        character: CHARACTER_A,
+        secondaryCharacter: CHARACTER_B,
+        secondaryCharacterId: "char-b",
+        nextSpeakerId: "char-a",
+      });
+
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A fallback", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B fallback", provider: "gemini", model: "gemini-test" });
+
+      const result = await service.processDebateMessage(
+        "conv-debate",
+        "user-1",
+        "@A y @B, que opinan?"
+      );
+
+      expect(result.responses[0].speakerId).toBe("char-a");
+      expect(result.inferenceDetails).toMatchObject({
+        method: "fallback_next_speaker",
+        selectedSpeakerId: "char-a",
+      });
     });
   });
 });

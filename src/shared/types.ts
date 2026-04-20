@@ -1,3 +1,7 @@
+export type ConversationMode = 'interview';
+export type LegacyConversationMode = 'chat' | 'interview';
+export type PromptMode = 'interview' | 'call' | 'debate';
+
 export interface ITextToSpeech {
   synthesize(text: string, voiceName?: string): Promise<Buffer>;
 }
@@ -24,6 +28,7 @@ export interface ProcessAudioMessageInput {
   audioBuffer: Buffer;
   mimeType: string;
   trace?: RequestTraceContext;
+  mode?: ConversationMode;
 }
 
 export interface ChatResponse {
@@ -32,6 +37,7 @@ export interface ChatResponse {
   speakerId?: string;
   speakerName?: string;
   audioBase64?: string;
+  suggestions?: string[];
   warning?: {
     code: string;
     message: string;
@@ -40,17 +46,179 @@ export interface ChatResponse {
   };
 }
 
-export interface DebateTurnCharacterResult {
-  messageId: number;
+export interface DebateWarningPayload {
+  code: string;
+  message: string;
+  stage: string;
+  retryable: boolean;
+}
+
+export type DebateTurnOrder = "A" | "B" | "forced";
+
+export type DebateSpeakerSelectionMethod =
+  | "explicit_forced"
+  | "text_mention"
+  | "fallback_next_speaker"
+  | "manual_mode";
+
+export interface DebateSpeakerInferenceDetails {
+  method: DebateSpeakerSelectionMethod;
+  selectedSpeakerId: string;
+  mentionText?: string;
+  confidence?: number;
+}
+
+export type DebateSkipReason =
+  | "manual_user"
+  | "auto_low_confidence"
+  | "not_applicable"
+  | "strategy"
+  | "unknown";
+
+export interface SendDebateTextPayload {
+  conversationId: string;
   text: string;
+  forced_speaker_id?: string | null;
+}
+
+export interface SendDebateAudioPayload {
+  conversationId: string;
+  audioBase64: string;
+  mimeType?: string;
+  forced_speaker_id?: string | null;
+}
+
+export interface SkipDebateTurnPayload {
+  conversationId: string;
+  speaker_id: string;
+  reason?: string;
+}
+
+export interface DebateTurnCharacterResult {
+  messageId?: number;
+  text?: string;
   speakerId: string;
   speakerName: string;
+  skipped?: boolean;
+  skipReason?: DebateSkipReason;
+  skipReasonDetail?: string;
+  confidence?: number;
+  isForced?: boolean;
+  inferenceMethod?: DebateSpeakerSelectionMethod;
+  detectedMentionText?: string;
+  mentionConfidence?: number;
   audioBase64?: string;
-  warning?: ChatResponse["warning"];
+  warning?: DebateWarningPayload;
 }
 
 export interface DebateTurnResult {
   userMessageId: number;
   userText: string;
   responses: DebateTurnCharacterResult[];
+  responsesCount: number;
+  skipsCount: number;
+  nextSpeakerId?: string;
+  inferenceDetails?: DebateSpeakerInferenceDetails;
+}
+
+// --- Granular debate event payloads ---
+
+export interface DebateUserAckPayload {
+  conversationId: string;
+  traceId: string;
+  userMessageId: number;
+  userText: string;
+}
+
+export interface DebateTypingPayload {
+  conversationId: string;
+  traceId: string;
+  speakerId: string;
+  speakerName: string;
+  turnOrder: DebateTurnOrder;
+  isForced?: boolean;
+}
+
+export interface DebateTurnPayload {
+  conversationId: string;
+  traceId: string;
+  messageId: number;
+  text: string;
+  speakerId: string;
+  speakerName: string;
+  turnOrder: DebateTurnOrder;
+  isForced?: boolean;
+  inference_method?: DebateSpeakerSelectionMethod;
+  detected_mention_text?: string;
+  mention_confidence?: number;
+  audio?: string;
+  warning?: DebateWarningPayload;
+}
+
+export interface DebateTurnSkippedPayload {
+  conversationId: string;
+  traceId: string;
+  messageId: number;
+  speakerId: string;
+  speakerName: string;
+  turnOrder: DebateTurnOrder;
+  reason: DebateSkipReason;
+  reasonDetail?: string;
+  confidence?: number;
+  isForced?: boolean;
+  inference_method?: DebateSpeakerSelectionMethod;
+  detected_mention_text?: string;
+  mention_confidence?: number;
+}
+
+export interface DebateRoundCompletePayload {
+  conversationId: string;
+  traceId: string;
+  responsesCount: number;
+  skipsCount: number;
+  nextSpeakerId?: string;
+  warnings?: DebateWarningPayload[];
+  inference_method?: DebateSpeakerSelectionMethod;
+  selected_speaker_id?: string;
+  detected_mention_text?: string;
+  mention_confidence?: number;
+}
+
+// --- Debate progress callbacks ---
+
+export interface DebateProgressCallbacks {
+  onUserMessagePersisted(payload: {
+    userMessageId: number;
+    userText: string;
+  }): void;
+  onTyping(payload: {
+    speakerId: string;
+    speakerName: string;
+    turnOrder: DebateTurnOrder;
+    isForced?: boolean;
+  }): void;
+  onTurnReady(payload: DebateTurnCharacterResult & { turnOrder: DebateTurnOrder }): void;
+  onTurnSkipped(payload: {
+    messageId: number;
+    speakerId: string;
+    speakerName: string;
+    turnOrder: DebateTurnOrder;
+    reason: DebateSkipReason;
+    reasonDetail?: string;
+    confidence?: number;
+    isForced?: boolean;
+    inferenceMethod?: DebateSpeakerSelectionMethod;
+    detectedMentionText?: string;
+    mentionConfidence?: number;
+  }): void;
+  onRoundCompleted(payload: {
+    warnings?: DebateWarningPayload[];
+    responsesCount: number;
+    skipsCount: number;
+    nextSpeakerId?: string;
+    inferenceDetails?: DebateSpeakerInferenceDetails;
+  }): void;
+  onSuggestionsReady?(payload: {
+    suggestions: string[];
+  }): void;
 }
