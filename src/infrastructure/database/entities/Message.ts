@@ -41,4 +41,10 @@ export class Message {
 
   @Column({ type: "integer", name: "duration_ms", nullable: true })
   durationMs?: number | null;
+
+  @Column({ type: "varchar", length: 20, name: "event_type", nullable: true })
+  eventType?: string | null;
+
+  @Column({ type: "jsonb", name: "event_meta_json", nullable: true })
+  eventMetaJson?: Record<string, unknown> | null;
 }

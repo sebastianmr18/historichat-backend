@@ -5,7 +5,7 @@ import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
 import { logger } from "../../infrastructure/logging/logger.js";
-import { extractUserId } from "../../api/auth.middleware.js";
+import { extractUserId } from "../../api/auth.utils.js";
 import { serializeError } from "../../shared/errors.js";
 import { generateTraceId } from "../../shared/trace.js";
 import { IStorageService } from "../../shared/types.js";
@@ -44,12 +44,21 @@ export class ConversationController {
   }
 
   private shapeConversationPayload(conversation: Conversation, mappedMessages: any[]) {
-    const mode = this.isDebateConversation(conversation) ? "debate" : "single";
+    const mode = this.isDebateConversation(conversation) ? "debate" : "interview";
     return {
       ...conversation,
       mode,
       primaryCharacter: conversation.character,
       secondaryCharacter: conversation.secondaryCharacter ?? null,
+      debateControl: mode === "debate"
+        ? {
+            turnMode: conversation.debateTurnMode ?? "auto_alternate",
+            preferredOpeningSpeakerId: conversation.preferredOpeningSpeakerId ?? null,
+            nextSpeakerId: conversation.nextSpeakerId ?? null,
+            lastForcedSpeakerId: conversation.lastForcedSpeakerId ?? null,
+            settings: conversation.debateSettings ?? null,
+          }
+        : null,
       messages: mappedMessages,
     };
   }
@@ -158,14 +167,29 @@ export class ConversationController {
         userId,
       });
       const savedConversation = await this.conversationRepo.save(newConversation);
-      res.status(201).json(savedConversation);
+
+      const persistedConversation = await this.conversationRepo.findOne({
+        where: { id: savedConversation.id, userId },
+        relations: {
+          character: true,
+          secondaryCharacter: true,
+          messages: { speakerCharacter: true },
+        },
+      });
+
+      if (!persistedConversation) {
+        return res.status(500).json({ error: "No se pudo recuperar la conversación creada" });
+      }
+
+      const payload = await this.withSignedUrlsForConversation(persistedConversation);
+      res.status(201).json(payload);
     } catch (error) {
       res.status(500).json({ error: "Error al crear la conversación" });
     }
   }
 
   async createDebate(req: Request, res: Response) {
-    const { characterIdA, characterIdB } = req.body;
+    const { characterIdA, characterIdB, turnMode, preferredOpeningSpeakerId } = req.body;
     const userId = extractUserId(req);
 
     if (!userId) return res.status(401).json({ error: "Usuario no autenticado" });
@@ -174,6 +198,10 @@ export class ConversationController {
     }
     if (characterIdA === characterIdB) {
       return res.status(400).json({ error: "characterIdA y characterIdB deben ser distintos" });
+    }
+
+    if (turnMode && turnMode !== "auto_alternate" && turnMode !== "manual") {
+      return res.status(400).json({ error: "turnMode debe ser auto_alternate o manual" });
     }
 
     try {
@@ -196,10 +224,24 @@ export class ConversationController {
         return res.status(404).json({ error: "Uno o ambos personajes no fueron encontrados o no son accesibles" });
       }
 
+      if (preferredOpeningSpeakerId && preferredOpeningSpeakerId !== characterA.id && preferredOpeningSpeakerId !== characterB.id) {
+        return res.status(400).json({ error: "preferredOpeningSpeakerId debe pertenecer a characterIdA o characterIdB" });
+      }
+
+      const openingSpeakerId = preferredOpeningSpeakerId ?? characterA.id;
+
       const newConversation = this.conversationRepo.create({
         character: { id: characterA.id },
         secondaryCharacter: { id: characterB.id },
         secondaryCharacterId: characterB.id,
+        debateTurnMode: turnMode ?? "auto_alternate",
+        preferredOpeningSpeakerId: openingSpeakerId,
+        nextSpeakerId: openingSpeakerId,
+        lastForcedSpeakerId: null,
+        debateSettings: {
+          autoSkipEnabled: true,
+          confidenceThreshold: env.DEBATE_SKIP_CONFIDENCE_THRESHOLD,
+        },
         userId,
       });
 

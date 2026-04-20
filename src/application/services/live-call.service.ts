@@ -9,7 +9,7 @@ import type { Character } from '../../infrastructure/database/entities/Character
 import { logger } from '../../infrastructure/logging/logger.js';
 import type { ChromaRepository } from '../../infrastructure/vector/chroma.repository.js';
 import type { IRepository } from '../../domain/repositories/repository.interfaces.js';
-import { buildSystemPrompt } from '../prompts/character-prompt.js';
+import { buildModeSystemPrompt } from '../prompts/system-prompt-builder.js';
 
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const DEFAULT_VOICE = 'Kore';
@@ -120,7 +120,11 @@ export class LiveCallService {
     character: Character,
   ): Promise<void> {
     const voiceName = character.voiceId || DEFAULT_VOICE;
-    const systemInstruction = buildSystemPrompt(character);
+    const systemInstruction = buildModeSystemPrompt({
+      character,
+      mode: 'call',
+      isRealtime: true,
+    });
 
     logger.info('[live-call.service] starting session', {
       sessionId,

@@ -8,9 +8,7 @@ const ragService = new RagService(AppDataSource, repository);
 
 export const ragQueryController = async (req: Request, res: Response) => {
   try {
-    const { query, characterId, topK } = req.body;
-
-    console.log(req.body)
+    const { query, characterId } = req.body;
 
     if (!query || !characterId) {
       return res.status(400).json({

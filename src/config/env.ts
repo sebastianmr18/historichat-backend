@@ -17,7 +17,15 @@ const envSchema = z.object({
   SUPABASE_STORAGE_BUCKET: z.string().default("communications"),
   SIGNED_URL_EXPIRES_SECONDS: z.coerce.number().int().positive().default(3600),
   GEMINI_API_KEY: z.string().min(1),
-  GEMINI_MODEL: z.string().default("gemini-2.5-flash-native-audio-preview-09-2025"),
+  GEMINI_CHAT_MODEL: z.string().default('gemini-3.1-flash-lite-preview'),
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_CHAT_MODEL: z.string().default('openai/gpt-oss-20b'),
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_CHAT_MODEL: z.string().default('google/gemma-4-26b-a4b-it'),
+  OPENROUTER_HTTP_REFERER: z.string().url().optional(),
+  OPENROUTER_APP_TITLE: z.string().optional(),
+  LLM_FALLBACK_ORDER: z.string().default('openrouter,groq,gemini'),
+  LLM_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(6000),
   GOOGLE_APPLICATION_CREDENTIALS: z
     .string()
     .min(1)
@@ -29,7 +37,12 @@ const envSchema = z.object({
   CHROMA_TENANT: z.string().default('default_tenant'),
   CHROMA_DATABASE: z.string().default('default_database'),
   CHROMA_HOST: z.string().optional(),
+  KB_UPLOAD_MAX_FILE_SIZE_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
+  KB_CHUNK_SIZE: z.coerce.number().int().min(200).max(8000).default(1200),
+  KB_CHUNK_OVERLAP: z.coerce.number().int().min(0).max(2000).default(150),
   DEBATE_TTS_ENABLED: z.coerce.boolean().default(true),
+  DEBATE_SKIP_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.35),
+  DEBATE_SPEAKER_INFERENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.7),
   GEMINI_LIVE_MODEL: z.string().default('gemini-2.5-flash-native-audio-preview-12-2025'),
 });
 

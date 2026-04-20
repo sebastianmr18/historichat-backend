@@ -34,6 +34,25 @@ export class Conversation {
   @Column("uuid", { name: "secondary_character_id", nullable: true })
   secondaryCharacterId?: string | null;
 
+  @Column("varchar", {
+    name: "debate_turn_mode",
+    length: 20,
+    default: "auto_alternate",
+  })
+  debateTurnMode?: "auto_alternate" | "manual";
+
+  @Column("uuid", { name: "preferred_opening_speaker_id", nullable: true })
+  preferredOpeningSpeakerId?: string | null;
+
+  @Column("uuid", { name: "next_speaker_id", nullable: true })
+  nextSpeakerId?: string | null;
+
+  @Column("uuid", { name: "last_forced_speaker_id", nullable: true })
+  lastForcedSpeakerId?: string | null;
+
+  @Column("jsonb", { name: "debate_settings", nullable: true })
+  debateSettings?: Record<string, unknown> | null;
+
   @BeforeInsert()
   assignDefaultsBeforeInsert() {
     if (!this.id) {

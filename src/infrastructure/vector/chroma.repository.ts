@@ -2,6 +2,7 @@ import { CloudClient } from "chromadb";
 import { DefaultEmbeddingFunction } from "@chroma-core/default-embed";
 import { env } from "../../config/env.js";
 import { logger } from "../logging/logger.js";
+import { KnowledgeBaseChunk } from "../../domain/rag/knowledge-base.types.js";
 
 export class ChromaRepository {
   private client: CloudClient;
@@ -71,5 +72,36 @@ export class ChromaRepository {
       logger.error(`[RAG][ChromaRepository] getContext:error (${collectionName})`, error);
       return ""; // No rompemos el flujo si el RAG falla
     }
+  }
+
+  async upsertDocuments(collectionName: string, chunks: KnowledgeBaseChunk[]): Promise<void> {
+    const cleanName = collectionName.replace(/"/g, "").trim();
+
+    if (!cleanName) {
+      throw new Error("Collection name is required to upsert documents");
+    }
+
+    if (!chunks.length) {
+      logger.warn("[RAG][ChromaRepository] upsertDocuments:empty-chunks", {
+        collectionName: cleanName,
+      });
+      return;
+    }
+
+    const collection = await this.client.getOrCreateCollection({
+      name: cleanName,
+      embeddingFunction: this.embedder,
+    });
+
+    await collection.upsert({
+      ids: chunks.map((chunk) => chunk.id),
+      documents: chunks.map((chunk) => chunk.text),
+      metadatas: chunks.map((chunk) => chunk.metadata),
+    });
+
+    logger.debug("[RAG][ChromaRepository] upsertDocuments:success", {
+      collectionName: cleanName,
+      chunkCount: chunks.length,
+    });
   }
 }
