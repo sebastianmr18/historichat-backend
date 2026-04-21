@@ -13,11 +13,11 @@ export class Conversation {
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @ManyToOne(() => Character, (character) => character.conversations)
+  @ManyToOne(() => Character, (character) => character.conversations, { onDelete: "CASCADE" })
   @JoinColumn({ name: "character_id", foreignKeyConstraintName: "app_conversation_character_id_b42f2e73_fk_app_character_id" })
   character: Relation<Character>;
 
-  @ManyToOne(() => Character, { nullable: true })
+  @ManyToOne(() => Character, { nullable: true, onDelete: "CASCADE" })
   @JoinColumn({ name: "secondary_character_id", foreignKeyConstraintName: "fk_app_conversation_secondary_character" })
   secondaryCharacter?: Relation<Character> | null;
 

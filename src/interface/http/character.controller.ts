@@ -12,12 +12,17 @@ import { CharacterQuote } from "../../infrastructure/database/entities/Character
 import { CharacterRelationship } from "../../infrastructure/database/entities/CharacterRelationship.js";
 import { CharacterTimelineEntry } from "../../infrastructure/database/entities/CharacterTimelineEntry.js";
 import { ContentVariantCopy } from "../../infrastructure/database/entities/ContentVariantCopy.js";
+import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
+import { Message } from "../../infrastructure/database/entities/Message.js";
 import { logger } from "../../infrastructure/logging/logger.js";
 import { extractUserId } from "../../api/auth.utils.js";
 import { serializeError } from "../../shared/errors.js";
+import { generateTraceId } from "../../shared/trace.js";
 import { IStorageService } from "../../shared/types.js";
 import { createCharacterSchema } from "./schemas/character.schema.js";
 import { withSignedGalleryImageUrls, withSignedImageUrls, withSignedImageUrlsBatch } from "./presenters/character.presenter.js";
+
+const CHARACTER_IMAGE_BUCKET = "characters";
 
 interface ResolvedUiCopy {
   copyKey: string;
@@ -71,6 +76,8 @@ type SignedGalleryImagePayloadSource = Pick<
 
 export class CharacterController {
   private characterRepo = AppDataSource.getRepository(Character);
+  private conversationRepo = AppDataSource.getRepository(Conversation);
+  private messageRepo = AppDataSource.getRepository(Message);
   private quoteRepo = AppDataSource.getRepository(CharacterQuote);
   private factRepo = AppDataSource.getRepository(CharacterFact);
   private contextCardRepo = AppDataSource.getRepository(CharacterContextCard);
@@ -83,6 +90,28 @@ export class CharacterController {
   private contentVariantCopyRepo = AppDataSource.getRepository(ContentVariantCopy);
 
   constructor(private readonly storage: IStorageService) {}
+
+  private getStoragePathCandidates(pathValue: string): string[] {
+    const raw = pathValue.trim();
+    const withoutLeadingSlash = raw.replace(/^\/+/, "");
+    const withoutBucketPrefix = withoutLeadingSlash.startsWith(`${CHARACTER_IMAGE_BUCKET}/`)
+      ? withoutLeadingSlash.slice(CHARACTER_IMAGE_BUCKET.length + 1)
+      : withoutLeadingSlash;
+
+    return [...new Set([raw, withoutLeadingSlash, withoutBucketPrefix].filter(Boolean))];
+  }
+
+  private getCharacterAssetPaths(character: Character, galleryImages: CharacterGalleryImage[]): string[] {
+    const assetPaths = [character.imageUrl, character.backgroundImageUrl, ...galleryImages.map((galleryImage) => galleryImage.imageUrl)]
+      .filter((pathValue): pathValue is string => Boolean(pathValue));
+
+    return [...new Set(assetPaths.flatMap((pathValue) => this.getStoragePathCandidates(pathValue)))];
+  }
+
+  private getMessageAudioPaths(messages: Message[]): string[] {
+    const values = messages.flatMap((message) => [message.audioStorageId, message.audioPath]);
+    return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
+  }
 
   private handleError(res: Response, context: string, error: unknown) {
     logger.error(`[character.${context}] failed`, serializeError(error));
@@ -596,6 +625,94 @@ export class CharacterController {
       return res.status(201).json(result);
     } catch (error) {
       this.handleError(res, "create", error);
+    }
+  }
+
+  async destroy(req: Request, res: Response) {
+    const traceId = generateTraceId();
+
+    try {
+      const characterId = this.getCharacterIdParam(req);
+      const userId = extractUserId(req);
+
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const character = await this.characterRepo.findOne({
+        where: [{ id: characterId as any, isPublic: true }, { id: characterId as any, isPublic: false, userId }],
+      });
+
+      if (!character) {
+        return res.status(404).json({ error: "Personaje no encontrado" });
+      }
+
+      const [galleryImages, relatedConversations] = await Promise.all([
+        this.galleryImageRepo.find({ where: { characterId: character.id } }),
+        this.conversationRepo.find({
+          where: [{ character: { id: character.id } }, { secondaryCharacter: { id: character.id } }],
+        }),
+      ]);
+
+      const conversationIds = relatedConversations.map((conversation) => conversation.id);
+      const messages = conversationIds.length > 0 ? await this.messageRepo.find({ where: conversationIds.map((conversationId) => ({ conversationId })) }) : [];
+
+      const characterAssetPaths = this.getCharacterAssetPaths(character, galleryImages);
+      const messageAudioPaths = this.getMessageAudioPaths(messages);
+
+      if (characterAssetPaths.length > 0) {
+        try {
+          await this.storage.deleteFiles(CHARACTER_IMAGE_BUCKET, characterAssetPaths);
+          logger.debug("[character.destroy] storage_cleanup_completed", {
+            traceId,
+            event: "delete_character",
+            characterId: character.id,
+            bucket: CHARACTER_IMAGE_BUCKET,
+            deletedFiles: characterAssetPaths.length,
+          });
+        } catch (error) {
+          logger.warn("[character.destroy] storage_cleanup_failed", {
+            traceId,
+            event: "delete_character",
+            characterId: character.id,
+            bucket: CHARACTER_IMAGE_BUCKET,
+            storagePaths: characterAssetPaths,
+            error: serializeError(error),
+          });
+        }
+      }
+
+      if (messageAudioPaths.length > 0) {
+        try {
+          await this.storage.deleteFiles(env.SUPABASE_STORAGE_BUCKET, messageAudioPaths);
+          logger.debug("[character.destroy] audio_cleanup_completed", {
+            traceId,
+            event: "delete_character",
+            characterId: character.id,
+            bucket: env.SUPABASE_STORAGE_BUCKET,
+            deletedFiles: messageAudioPaths.length,
+          });
+        } catch (error) {
+          logger.warn("[character.destroy] audio_cleanup_failed", {
+            traceId,
+            event: "delete_character",
+            characterId: character.id,
+            bucket: env.SUPABASE_STORAGE_BUCKET,
+            storagePaths: messageAudioPaths,
+            error: serializeError(error),
+          });
+        }
+      }
+
+      const result = await this.characterRepo.delete({ id: character.id });
+
+      if (result.affected === 0) {
+        return res.status(404).json({ error: "Personaje no encontrado" });
+      }
+
+      return res.status(204).send();
+    } catch (error) {
+      this.handleError(res, "destroy", error);
     }
   }
 }
