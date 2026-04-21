@@ -9,6 +9,7 @@ import { extractUserId } from "../../api/auth.utils.js";
 import { serializeError } from "../../shared/errors.js";
 import { generateTraceId } from "../../shared/trace.js";
 import { IStorageService } from "../../shared/types.js";
+import { listConversationsQuerySchema } from "./schemas/conversation.schema.js";
 
 export class ConversationController {
   private characterRepo = AppDataSource.getRepository(Character);
@@ -127,8 +128,22 @@ export class ConversationController {
     if (!userId) return res.status(401).json({ error: "Usuario no autenticado" });
 
     try {
+      const parsedQuery = listConversationsQuerySchema.safeParse(req.query ?? {});
+
+      if (!parsedQuery.success) {
+        return res.status(400).json({ error: "character_id invalido" });
+      }
+
+      const { character_id: characterId } = parsedQuery.data;
+      const where = characterId
+        ? [
+            { userId, character: { id: characterId } },
+            { userId, secondaryCharacter: { id: characterId } },
+          ]
+        : { userId };
+
       const conversations = await this.conversationRepo.find({
-        where: { userId },
+        where,
         relations: {
           character: true,
           secondaryCharacter: true,
