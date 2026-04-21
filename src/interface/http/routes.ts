@@ -16,6 +16,7 @@ router.get('/me', (req, res) => profileCtrl.getMe(req, res));
 router.get('/characters', (req, res) => characterCtrl.getAll(req, res));
 router.post('/characters', (req, res) => characterCtrl.create(req, res));
 router.delete('/characters/:id', requireAdminRole, (req, res) => characterCtrl.destroy(req, res));
+router.get('/characters/by-slug/:slug', (req, res) => characterCtrl.getBySlug(req, res));
 router.get('/characters/:id', (req, res) => characterCtrl.getById(req, res));
 router.get('/characters/:id/editorial/hero', (req, res) => characterCtrl.getEditorialHeroById(req, res));
 router.get('/characters/:id/editorial/overview', (req, res) => characterCtrl.getEditorialOverviewById(req, res));

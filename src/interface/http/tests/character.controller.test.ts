@@ -28,7 +28,13 @@ vi.mock("../../../config/env.js", () => ({
 
 describe("CharacterController", () => {
   let controller: InstanceType<typeof import("../character.controller.js").CharacterController>;
-  let characterRepo: { findOne: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
+  let characterRepo: {
+    findOne: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    save: ReturnType<typeof vi.fn>;
+    find: ReturnType<typeof vi.fn>;
+  };
   let conversationRepo: { find: ReturnType<typeof vi.fn> };
   let messageRepo: { find: ReturnType<typeof vi.fn> };
   let galleryImageRepo: { find: ReturnType<typeof vi.fn> };
@@ -45,6 +51,9 @@ describe("CharacterController", () => {
     };
 
     characterRepo = {
+      create: vi.fn((value) => value),
+      save: vi.fn(),
+      find: vi.fn(),
       findOne: vi.fn(),
       delete: vi.fn(),
     };
@@ -87,6 +96,10 @@ describe("CharacterController", () => {
     vi.clearAllMocks();
     characterRepo.findOne.mockReset();
     characterRepo.delete.mockReset();
+    characterRepo.create.mockReset();
+    characterRepo.create.mockImplementation((value) => value);
+    characterRepo.save.mockReset();
+    characterRepo.find.mockReset();
     conversationRepo.find.mockReset();
     messageRepo.find.mockReset();
     galleryImageRepo.find.mockReset();
@@ -172,6 +185,123 @@ describe("CharacterController", () => {
       expect(characterRepo.delete).toHaveBeenCalledWith({ id: "character-1" });
       expect(res.status).toHaveBeenCalledWith(204);
       expect(res.send).toHaveBeenCalled();
+    });
+  });
+
+  describe("create", () => {
+    it("generates a unique publicSlug from the name when one is not provided", async () => {
+      const req = {
+        body: {
+          name: "Simón Bolívar",
+          role: "Libertador",
+          biography: "Biografía",
+        },
+        user: { sub: "admin-user" },
+      } as unknown as Request;
+      const res = createResponse();
+
+      characterRepo.findOne.mockResolvedValueOnce({ id: "existing-character", publicSlug: "simon-bolivar" }).mockResolvedValueOnce(null);
+      characterRepo.save.mockImplementation(async (value) => ({
+        id: "character-1",
+        description: null,
+        keyTraits: [],
+        speechTics: [],
+        vectorDbName: "",
+        voiceId: null,
+        themeColor: null,
+        themeColorLight: null,
+        years: null,
+        category: null,
+        epoch: null,
+        quote: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        ambientLabel: null,
+        contentVariant: null,
+        badge: null,
+        topics: [],
+        isPublic: false,
+        createdAt: new Date("2026-04-20T00:00:00.000Z"),
+        ...value,
+      }));
+
+      await controller.create(req, res);
+
+      expect(characterRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Simón Bolívar",
+          publicSlug: "simon-bolivar-2",
+          userId: "admin-user",
+        }),
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ publicSlug: "simon-bolivar-2" }));
+    });
+
+    it("rejects an explicit publicSlug when it is already taken", async () => {
+      const req = {
+        body: {
+          name: "Albert Einstein",
+          publicSlug: "Albert Einstein",
+          role: "Físico",
+          biography: "Biografía",
+        },
+        user: { sub: "admin-user" },
+      } as unknown as Request;
+      const res = createResponse();
+
+      characterRepo.findOne.mockResolvedValue({ id: "existing-character", publicSlug: "albert-einstein" });
+
+      await controller.create(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({ error: "El slug publico ya existe" });
+      expect(characterRepo.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getBySlug", () => {
+    it("returns a public character resolved by normalized slug", async () => {
+      const req = {
+        params: { slug: "Sócrates" },
+        user: { sub: "admin-user" },
+      } as unknown as Request;
+      const res = createResponse();
+
+      characterRepo.findOne.mockResolvedValue({
+        id: "character-1",
+        name: "Sócrates",
+        publicSlug: "socrates",
+        role: "Filósofo",
+        biography: "Biografía",
+        description: null,
+        keyTraits: [],
+        speechTics: [],
+        vectorDbName: "",
+        voiceId: null,
+        themeColor: null,
+        themeColorLight: null,
+        years: null,
+        category: null,
+        epoch: null,
+        quote: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        ambientLabel: null,
+        contentVariant: null,
+        badge: null,
+        topics: [],
+        isPublic: true,
+        createdAt: new Date("2026-04-20T00:00:00.000Z"),
+        userId: null,
+      });
+
+      await controller.getBySlug(req, res);
+
+      expect(characterRepo.findOne).toHaveBeenCalledWith({
+        where: [{ publicSlug: "socrates", isPublic: true }, { publicSlug: "socrates", isPublic: false, userId: "admin-user" }],
+      });
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ publicSlug: "socrates" }));
     });
   });
 });
