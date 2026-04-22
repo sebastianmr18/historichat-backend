@@ -5,6 +5,7 @@ export const createCharacterSchema = z.object({
     .string({ error: "El campo 'name' es obligatorio" })
     .min(1, "El campo 'name' es obligatorio")
     .transform((v) => v.trim()),
+  publicSlug: z.string().trim().optional(),
   role: z
     .string({ error: "El campo 'role' es obligatorio" })
     .min(1, "El campo 'role' es obligatorio")

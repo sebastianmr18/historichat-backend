@@ -22,6 +22,10 @@ export class Character {
   @Column({ type: "varchar", length: 100 })
   name: string;
 
+  @Index("idx_app_character_public_slug", { unique: true })
+  @Column({ type: "text", name: "public_slug" })
+  publicSlug: string;
+
   @Column({ type: "varchar", length: 100 })
   role: string;
 
