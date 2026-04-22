@@ -43,6 +43,13 @@ interface DebateDecisionOutput {
   skipReason?: DebateSkipReason;
 }
 
+type DebateDecisionSource = "native_object" | "text_json" | "text_fenced_json" | "text_embedded_json";
+
+interface DebateDecisionParseResult {
+  decision: DebateDecisionOutput | null;
+  source: DebateDecisionSource | null;
+}
+
 interface DebateProcessOptions {
   forcedSpeakerId?: string | null;
   manualSkips?: Record<string, string | undefined>;
@@ -324,6 +331,124 @@ export class ChatService {
       confidence,
       skipReason,
     };
+  }
+
+  private tryParseJsonObject(text: string): Record<string, unknown> | null {
+    const trimmed = text.trim();
+    if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private extractSingleJsonFence(text: string): string | null {
+    const match = text.trim().match(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i);
+    return match?.[1]?.trim() ?? null;
+  }
+
+  private extractEmbeddedJsonObject(text: string): string | null {
+    const content = text.trim();
+    const start = content.indexOf("{");
+    if (start === -1) {
+      return null;
+    }
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < content.length; i += 1) {
+      const char = content[i];
+      if (char == null) {
+        continue;
+      }
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+
+        if (char === "\\") {
+          escaped = true;
+          continue;
+        }
+
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === "{") {
+        depth += 1;
+      } else if (char === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          return content.slice(start, i + 1);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private parseDebateDecision(raw: unknown): DebateDecisionParseResult {
+    if (raw && typeof raw === "object") {
+      return {
+        decision: this.normalizeDebateDecision(raw),
+        source: "native_object",
+      };
+    }
+
+    if (typeof raw !== "string") {
+      return { decision: null, source: null };
+    }
+
+    const fromJsonText = this.tryParseJsonObject(raw);
+    if (fromJsonText) {
+      return {
+        decision: this.normalizeDebateDecision(fromJsonText),
+        source: "text_json",
+      };
+    }
+
+    const fenced = this.extractSingleJsonFence(raw);
+    if (fenced) {
+      const fromFence = this.tryParseJsonObject(fenced);
+      if (fromFence) {
+        return {
+          decision: this.normalizeDebateDecision(fromFence),
+          source: "text_fenced_json",
+        };
+      }
+    }
+
+    const embedded = this.extractEmbeddedJsonObject(raw);
+    if (embedded) {
+      const fromEmbedded = this.tryParseJsonObject(embedded);
+      if (fromEmbedded) {
+        return {
+          decision: this.normalizeDebateDecision(fromEmbedded),
+          source: "text_embedded_json",
+        };
+      }
+    }
+
+    return { decision: null, source: null };
   }
 
   private resolveDebatePlans(
@@ -858,6 +983,17 @@ export class ChatService {
       }
     }
 
+    logger.debug("[chat.processDebateMessage] debate_turn_selection_resolved", {
+      ...traceCtx,
+      configuredNextSpeakerId,
+      explicitForcedSpeakerId,
+      effectiveForcedSpeakerId,
+      inferenceMethod: inferenceDetails?.method,
+      inferredSpeakerId: inferenceDetails?.selectedSpeakerId,
+      mentionConfidence: inferenceDetails?.confidence,
+      mentionText: inferenceDetails?.mentionText,
+    });
+
     const inferenceTurnMetadata = {
       inferenceMethod: inferenceDetails.method,
       detectedMentionText: inferenceDetails.mentionText,
@@ -870,6 +1006,18 @@ export class ChatService {
       configuredNextSpeakerId,
       effectiveForcedSpeakerId
     );
+
+    logger.debug("[chat.processDebateMessage] debate_turn_plans_resolved", {
+      ...traceCtx,
+      plans: plans.map((plan) => ({
+        speakerId: plan.speaker.id,
+        speakerName: plan.speaker.name,
+        opponentId: plan.opponent.id,
+        turnOrder: plan.turnOrder,
+        isForced: plan.isForced,
+      })),
+      manualSkipSpeakerIds: Object.keys(manualSkips),
+    });
 
     for (const manualSkipSpeakerId of Object.keys(manualSkips)) {
       if (manualSkipSpeakerId !== speakerA.id && manualSkipSpeakerId !== speakerB.id) {
@@ -914,6 +1062,17 @@ export class ChatService {
     const roundHistory: Array<Pick<Message, "role" | "content">> = [...baseHistory];
 
     for (const plan of plans) {
+      const manualSkipReason = manualSkips[plan.speaker.id];
+
+      logger.debug("[chat.processDebateMessage] debate_turn_evaluation_started", {
+        ...traceCtx,
+        speakerId: plan.speaker.id,
+        speakerName: plan.speaker.name,
+        turnOrder: plan.turnOrder,
+        isForced: plan.isForced,
+        hasManualSkip: manualSkipReason != null,
+      });
+
       callbacks?.onTyping({
         speakerId: plan.speaker.id,
         speakerName: plan.speaker.name,
@@ -927,9 +1086,16 @@ export class ChatService {
         turnOrder: plan.turnOrder,
         isForced: plan.isForced,
       });
-
-      const manualSkipReason = manualSkips[plan.speaker.id];
       if (manualSkipReason != null) {
+        logger.debug("[chat.processDebateMessage] debate_turn_manual_skip_selected", {
+          ...traceCtx,
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          turnOrder: plan.turnOrder,
+          isForced: plan.isForced,
+          manualSkipReason,
+        });
+
         let skipMessage: Message;
         try {
           skipMessage = await this.dataSource.transaction(async (manager) => {
@@ -998,6 +1164,7 @@ export class ChatService {
       });
 
       let decision: DebateDecisionOutput | null = null;
+      let decisionSource: DebateDecisionSource | null = null;
       let fallbackText = "";
       try {
         const aiDecision = await this.llm.generateResponse(
@@ -1008,7 +1175,9 @@ export class ChatService {
           debateTurnSchema
         );
 
-        decision = this.normalizeDebateDecision(aiDecision.structuredOutput ?? aiDecision.text);
+        const parsedDecision = this.parseDebateDecision(aiDecision.structuredOutput ?? aiDecision.text);
+        decision = parsedDecision.decision;
+        decisionSource = parsedDecision.source;
         fallbackText = aiDecision.text;
       } catch (error) {
         await this.cleanupDebateMessages(persistedMessageIds, traceCtx);
@@ -1023,12 +1192,55 @@ export class ChatService {
       const confidence = decision?.confidence ?? 0.5;
       const shouldSkipForLowConfidence = confidence < threshold;
       const shouldSkip = decision?.action === "skip" || shouldSkipForLowConfidence;
+      const rawDebateOutput = decision?.text ?? fallbackText;
+
+      logger.debug("[chat.processDebateMessage] debate_turn_decision_evaluated", {
+        ...traceCtx,
+        speakerId: plan.speaker.id,
+        speakerName: plan.speaker.name,
+        turnOrder: plan.turnOrder,
+        isForced: plan.isForced,
+        llmAction: decision?.action ?? null,
+        decisionSource,
+        llmSkipReason: decision?.skipReason ?? null,
+        llmReason: decision?.reason ?? null,
+        llmTextLength: decision?.text?.length ?? fallbackText.length,
+        confidence,
+        confidenceThreshold: threshold,
+        shouldSkipForLowConfidence,
+        shouldSkip,
+      });
+
+      logger.debug("[chat.processDebateMessage] debate_turn_llm_output", {
+        ...traceCtx,
+        speakerId: plan.speaker.id,
+        speakerName: plan.speaker.name,
+        turnOrder: plan.turnOrder,
+        isForced: plan.isForced,
+        llmAction: decision?.action ?? null,
+        decisionSource,
+        rawOutput: rawDebateOutput,
+      });
 
       if (shouldSkip) {
         const skipReason: DebateSkipReason = shouldSkipForLowConfidence
           ? "auto_low_confidence"
           : decision?.skipReason ?? "unknown";
         const skipDetail = decision?.reason ?? "Sin contexto suficiente para responder con calidad.";
+
+        logger.debug("[chat.processDebateMessage] debate_turn_auto_skip_selected", {
+          ...traceCtx,
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          turnOrder: plan.turnOrder,
+          isForced: plan.isForced,
+          skipReason,
+          skipDetail,
+          confidence,
+          confidenceThreshold: threshold,
+          triggeredByModelSkip: decision?.action === "skip",
+          triggeredByLowConfidence: shouldSkipForLowConfidence,
+        });
 
         let skipMessage: Message;
         try {
@@ -1083,17 +1295,38 @@ export class ChatService {
         continue;
       }
 
-      let responseText = (decision?.text ?? fallbackText).trim();
+      let responseText = rawDebateOutput.trim();
       try {
         responseText = sanitizeAssistantOutput(responseText, {
           allowJsonEnvelope: true,
           rejectCodeLikeContent: true,
         });
-      } catch {
+      } catch (error) {
+        logger.debug("[chat.processDebateMessage] debate_turn_output_sanitization_failed", {
+          ...traceCtx,
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          turnOrder: plan.turnOrder,
+          isForced: plan.isForced,
+          llmAction: decision?.action ?? null,
+          decisionSource,
+          sanitizationError: error instanceof Error ? error.message : String(error),
+          rawOutput: rawDebateOutput,
+        });
         responseText = "";
       }
 
       if (!responseText) {
+        logger.debug("[chat.processDebateMessage] debate_turn_empty_response_skip_selected", {
+          ...traceCtx,
+          speakerId: plan.speaker.id,
+          speakerName: plan.speaker.name,
+          turnOrder: plan.turnOrder,
+          isForced: plan.isForced,
+          confidence,
+          llmAction: decision?.action ?? null,
+        });
+
         let skipMessage: Message;
         try {
           skipMessage = await this.dataSource.transaction(async (manager) => {
