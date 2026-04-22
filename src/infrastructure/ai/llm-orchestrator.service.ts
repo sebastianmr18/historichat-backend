@@ -75,6 +75,8 @@ export class LlmOrchestratorService implements LlmProvider {
           fallbackDepth: index,
           textLength: response.text.length,
           hasStructuredOutput: response.structuredOutput != null,
+          text: response.text,
+          structuredOutput: response.structuredOutput ?? null,
         });
 
         return {

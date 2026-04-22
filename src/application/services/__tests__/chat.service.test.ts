@@ -844,6 +844,53 @@ describe("ChatService", () => {
       expect(mockMessageDelete).toHaveBeenCalledWith([1, 2]);
     });
 
+    it("parses fenced JSON decision text and responds without skip", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({
+          text: [
+            "```json",
+            '{"action":"respond","confidence":0.95,"text":"A responde desde JSON fenced"}',
+            "```",
+          ].join("\n"),
+          provider: "openrouter",
+          model: "google/gemma-4-26b-a4b-it",
+          structuredOutput: null,
+        })
+        .mockResolvedValueOnce({ text: "B responde normal", provider: "gemini", model: "gemini-test" });
+
+      const result = await service.processDebateMessage("conv-debate", "user-1", "Debatamos");
+
+      expect(result.skipsCount).toBe(0);
+      expect(result.responses[0]).toMatchObject({
+        speakerId: "char-a",
+        text: "A responde desde JSON fenced",
+      });
+      expect(result.responses[1]).toMatchObject({
+        speakerId: "char-b",
+        text: "B responde normal",
+      });
+    });
+
+    it("parses embedded JSON decision text and responds without skip", async () => {
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({
+          text:
+            'Perfecto, aqui va mi salida final: {"action":"respond","confidence":0.88,"text":"A responde desde JSON embebido"}',
+          provider: "openrouter",
+          model: "google/gemma-4-26b-a4b-it",
+          structuredOutput: null,
+        })
+        .mockResolvedValueOnce({ text: "B responde normal", provider: "gemini", model: "gemini-test" });
+
+      const result = await service.processDebateMessage("conv-debate", "user-1", "Debatamos");
+
+      expect(result.skipsCount).toBe(0);
+      expect(result.responses[0]).toMatchObject({
+        speakerId: "char-a",
+        text: "A responde desde JSON embebido",
+      });
+    });
+
     it("filters event-role messages from LLM history in loadConversationHistory", async () => {
       // Simulate that DB returns a mix of user, assistant, and event messages
       mockMessageFind.mockResolvedValueOnce([
