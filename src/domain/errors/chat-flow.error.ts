@@ -1,5 +1,6 @@
 export type ChatFlowErrorCode =
   | "CONVERSATION_NOT_FOUND"
+  | "INVALID_INPUT"
   | "STT_FAILED"
   | "NO_SPEECH"
   | "AUDIO_UPLOAD_FAILED"
