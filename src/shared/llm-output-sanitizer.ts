@@ -18,6 +18,32 @@ const CODE_PATTERNS: RegExp[] = [
   /<\/?(html|body|script|style)[^>]*>/i,
 ];
 
+// Patterns indicating the model may be leaking the system prompt or confirming a jailbreak.
+const OUTPUT_LEAK_PATTERNS: RegExp[] = [
+  /<system_identity>/i,
+  /<behavior_rules>/i,
+  /\bSYSTEM PROMPT\s*:/i,
+  /\bINSTRUCCIONES DEL SISTEMA\s*:/i,
+  /mis instrucciones (son|dicen|incluyen)/i,
+  /my (system )?instructions (are|say|include)/i,
+  /mi prompt de sistema/i,
+  /DAN\s+mode\s+activated/i,
+  /I\s+am\s+now\s+unrestricted/i,
+  /ahora\s+(soy|estoy)\s+(libre|sin restricciones)/i,
+  /jailbreak\s+(successful|complete|activated)/i,
+];
+
+export function detectOutputLeaks(text: string): { leaked: boolean; patterns: string[] } {
+  const matched = OUTPUT_LEAK_PATTERNS
+    .filter((p) => {
+      p.lastIndex = 0;
+      return p.test(text);
+    })
+    .map((p) => p.source);
+
+  return { leaked: matched.length > 0, patterns: matched };
+}
+
 function tryParseJson(value: string): unknown | undefined {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -92,6 +118,11 @@ export function sanitizeAssistantOutput(rawText: string, options: SanitizerOptio
 
   if (text.startsWith("{") || text.startsWith("[")) {
     throw new InvalidAssistantOutputError("La respuesta del asistente mantiene formato estructurado no permitido.");
+  }
+
+  const leakCheck = detectOutputLeaks(text);
+  if (leakCheck.leaked) {
+    throw new InvalidAssistantOutputError("La respuesta del asistente contiene contenido no permitido.");
   }
 
   return text;
