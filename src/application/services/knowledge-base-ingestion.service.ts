@@ -4,6 +4,7 @@ import { PDFParse } from "pdf-parse";
 import { Character } from "../../infrastructure/database/entities/Character.js";
 import { ChromaRepository } from "../../infrastructure/vector/chroma.repository.js";
 import { logger } from "../../infrastructure/logging/logger.js";
+import { sanitizeRagChunk } from "../prompts/prompt-field-sanitizer.js";
 import {
   KnowledgeBaseChunk,
   KnowledgeBaseUploadInput,
@@ -174,13 +175,25 @@ export class KnowledgeBaseIngestionService {
         continue;
       }
 
-      const chunkHash = crypto.createHash("sha256").update(rawChunk).digest("hex").slice(0, 16);
+      const { text: chunkText, flagged } = sanitizeRagChunk(rawChunk);
+
+      if (flagged) {
+        logger.warn("[security] rag_chunk_flagged", {
+          characterId: metadataBase.characterId,
+          fileName: metadataBase.sourceFileName,
+          chunkIndex: index,
+          preview: rawChunk.slice(0, 100),
+        });
+      }
+
+      const chunkHash = crypto.createHash("sha256").update(chunkText).digest("hex").slice(0, 16);
       chunks.push({
         id: `${metadataBase.characterId}:${chunkHash}:${index}`,
-        text: rawChunk,
+        text: chunkText,
         metadata: {
           ...metadataBase,
           chunkIndex: index,
+          flagged,
         },
       });
     }

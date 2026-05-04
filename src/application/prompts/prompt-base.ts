@@ -1,4 +1,5 @@
 import { Character } from "../../infrastructure/database/entities/Character.js";
+import { sanitizeArrayField, sanitizePromptField } from "./prompt-field-sanitizer.js";
 
 function buildLabeledSegment(label: string, value?: string | null): string {
   const normalizedValue = value?.trim();
@@ -11,18 +12,25 @@ function buildLabeledSegment(label: string, value?: string | null): string {
 }
 
 export function buildBaseCharacterPrompt(character: Character): string {
-  const description = buildLabeledSegment("Descripcion", character.description);
-  const years = buildLabeledSegment("Periodo", character.years);
-  const epoch = buildLabeledSegment("Epoca", character.epoch);
-  const category = buildLabeledSegment("Categoria", character.category);
-  const traits = Array.isArray(character.keyTraits) && character.keyTraits.length > 0
-    ? ` Rasgos clave: ${character.keyTraits.join(", ")}.`
+  const name = sanitizePromptField(character.name ?? "", "name").value;
+  const role = sanitizePromptField(character.role ?? "", "role").value;
+  const biography = sanitizePromptField(character.biography ?? "", "biography").value;
+  const description = sanitizePromptField(character.description ?? "", "description").value;
+  const years = sanitizePromptField(character.years ?? "", "years").value;
+  const epoch = sanitizePromptField(character.epoch ?? "", "epoch").value;
+  const category = sanitizePromptField(character.category ?? "", "category").value;
+
+  const safeTraits = sanitizeArrayField(character.keyTraits ?? [], "keyTraitItem");
+  const safeTics = sanitizeArrayField(character.speechTics ?? [], "speechTicItem");
+
+  const traitsSegment = safeTraits.length > 0
+    ? ` Rasgos clave: ${safeTraits.join(", ")}.`
     : "";
-  const speechTics = Array.isArray(character.speechTics) && character.speechTics.length > 0
-    ? ` Tics de habla: ${character.speechTics.join(", ")}.`
+  const ticsSegment = safeTics.length > 0
+    ? ` Tics de habla: ${safeTics.join(", ")}.`
     : "";
 
-  return `Actua como ${character.name}.${buildLabeledSegment("Rol", character.role)}${buildLabeledSegment("Bio", character.biography)}${description}${years}${epoch}${category}${traits}${speechTics}
+  return `Actua como ${name}.${buildLabeledSegment("Rol", role)}${buildLabeledSegment("Bio", biography)}${buildLabeledSegment("Descripcion", description)}${buildLabeledSegment("Periodo", years)}${buildLabeledSegment("Epoca", epoch)}${buildLabeledSegment("Categoria", category)}${traitsSegment}${ticsSegment}
 Mantén una conversación natural, cercana y coherente con tu personalidad.
 Responde en primera persona y con un tono auténtico.
 Prioriza claridad y continuidad: respuestas útiles, concretas y con contexto suficiente.

@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, Content, Part } from "@google/generative-ai";
 import { env } from "../../config/env.js";
 import { logger } from "../logging/logger.js";
+import { buildFinalUserPrompt } from "../../application/prompts/user-prompt-builder.js";
 import {
   LlmGenerateResponse,
   LlmHistoryMessage,
@@ -67,10 +68,8 @@ export class GeminiService implements LlmProvider {
         },
       });
 
-      // 4. Preparar el prompt final incluyendo el contexto RAG
-      const finalPrompt = contextRAG 
-        ? `[CONTEXTO RAG]\n${contextRAG}\n\n[PREGUNTA]\n${userQuery}`
-        : userQuery;
+      // 4. Build the final user prompt with structural context isolation
+      const finalPrompt = buildFinalUserPrompt(userQuery, contextRAG);
 
       const result = await chat.sendMessage(finalPrompt);
       const response = await result.response;

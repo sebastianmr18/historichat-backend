@@ -33,7 +33,10 @@ import type { ChatFlowErrorCode } from "../../domain/errors/chat-flow.error.js";
 import { ChatFlowError } from "../../domain/errors/chat-flow.error.js";
 import type { IRepository, IDataSource } from "../../domain/repositories/repository.interfaces.js";
 import { sanitizeAssistantOutput } from "../../shared/llm-output-sanitizer.js";
+import { sanitizePromptField } from "../prompts/prompt-field-sanitizer.js";
 import { detectDebateMentionedSpeaker } from "./speaker-mention-detector.js";
+
+const MAX_USER_MESSAGE_LENGTH = 8000;
 
 interface DebateDecisionOutput {
   action: "respond" | "skip";
@@ -84,6 +87,32 @@ export class ChatService {
     }
 
     return new ChatFlowError(fallbackCode, fallbackMessage, "unknown", true, error);
+  }
+
+  private assertValidUserInput(userText: string, context: string): void {
+    const trimmed = (userText ?? "").trim();
+
+    if (!trimmed) {
+      throw new ChatFlowError("INVALID_INPUT", "El mensaje no puede estar vacío.", "validation", false);
+    }
+
+    if (trimmed.length > MAX_USER_MESSAGE_LENGTH) {
+      throw new ChatFlowError(
+        "INVALID_INPUT",
+        `El mensaje supera el límite de ${MAX_USER_MESSAGE_LENGTH} caracteres.`,
+        "validation",
+        false,
+      );
+    }
+
+    // Detect injection patterns for monitoring only — the structural defense lives in buildFinalUserPrompt.
+    const { hadSuspiciousContent } = sanitizePromptField(trimmed, "userMessage");
+    if (hadSuspiciousContent) {
+      logger.warn("[security] suspicious_user_input_detected", {
+        context,
+        preview: trimmed.slice(0, 100),
+      });
+    }
   }
 
   private async cleanupDebateMessages(
@@ -566,6 +595,8 @@ export class ChatService {
     mode?: ConversationMode,
     trace?: RequestTraceContext
   ): Promise<ChatResponse> {
+    this.assertValidUserInput(userText, "processTextMessage");
+
     const traceCtx = createTraceContext(trace, {
       conversationId,
       userId,
@@ -916,6 +947,8 @@ export class ChatService {
     callbacks?: DebateProgressCallbacks,
     options?: DebateProcessOptions
   ): Promise<DebateTurnResult> {
+    this.assertValidUserInput(userText, "processDebateMessage");
+
     const traceCtx = createTraceContext(trace, {
       conversationId,
       userId,

@@ -1,9 +1,8 @@
 import { LlmProviderError } from "./llm-provider.interface.js";
+import { buildFinalUserPrompt } from "../../application/prompts/user-prompt-builder.js";
 
 export function buildFinalPrompt(userQuery: string, contextRag?: string): string {
-  return contextRag
-    ? `[CONTEXTO RAG]\n${contextRag}\n\n[PREGUNTA]\n${userQuery}`
-    : userQuery;
+  return buildFinalUserPrompt(userQuery, contextRag);
 }
 
 export function buildStructuredOutputSystemPrompt(systemPrompt: string, responseSchema?: unknown): string {
