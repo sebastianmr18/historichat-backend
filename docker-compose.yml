@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Mount GCP credentials file (required for Speech-to-Text / TTS)
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/gcp-credentials.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-credentials.json
+    restart: unless-stopped
