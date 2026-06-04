@@ -20,12 +20,21 @@ import { logger } from '../../infrastructure/logging/logger.js';
 import type { ChromaRepository } from '../../infrastructure/vector/chroma.repository.js';
 import type { IRepository } from '../../domain/repositories/repository.interfaces.js';
 import { buildModeSystemPrompt } from '../prompts/system-prompt-builder.js';
-import { env } from '../../config/env.js';
 
 /** Tiempo maximo de inactividad permitido (5 minutos) antes de terminar la llamada. */
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 /** Voz por defecto utilizada en la sesion de Gemini en tiempo real si el personaje no define una. */
 const DEFAULT_VOICE = 'Kore';
+/** Directorio por defecto para guardar transcripciones de prueba cuando el logger local esta activo. */
+const DEFAULT_TEST_LOGGER_DIR = 'testing/outputs/p6-ux/live-call-logs';
+
+function isLiveCallTestLoggerEnabled(): boolean {
+  return process.env.LIVE_CALL_TEST_LOGGER_ENABLED === 'true';
+}
+
+function getLiveCallTestLoggerDir(): string {
+  return process.env.LIVE_CALL_TEST_LOGGER_DIR || DEFAULT_TEST_LOGGER_DIR;
+}
 
 /**
  * Servicio de backend para la gestion de llamadas en tiempo real con personajes de IA.
@@ -300,14 +309,15 @@ export class LiveCallService {
     reason: 'user_request' | 'gemini_closed' | 'timeout' | 'error',
     durationMs: number,
   ): void {
-    if (!env.LIVE_CALL_TEST_LOGGER_ENABLED) {
+    if (!isLiveCallTestLoggerEnabled()) {
       return;
     }
 
     try {
-      const logsDir = path.isAbsolute(env.LIVE_CALL_TEST_LOGGER_DIR)
-        ? env.LIVE_CALL_TEST_LOGGER_DIR
-        : path.resolve(process.cwd(), env.LIVE_CALL_TEST_LOGGER_DIR);
+      const loggerDir = getLiveCallTestLoggerDir();
+      const logsDir = path.isAbsolute(loggerDir)
+        ? loggerDir
+        : path.resolve(process.cwd(), loggerDir);
       fs.mkdirSync(logsDir, { recursive: true });
 
       const output = {
