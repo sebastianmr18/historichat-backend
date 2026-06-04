@@ -1,3 +1,11 @@
+/**
+ * @file conversation.controller.ts
+ * @description Controlador HTTP para la gestion del ciclo de vida de las conversaciones.
+ * Expone endpoints para listar, crear, recuperar y eliminar conversaciones normales
+ * (modo entrevista) y conversaciones de debate entre dos personajes.
+ * Gestiona tambien la firma de URLs de audio de los mensajes almacenados en Supabase Storage.
+ */
+
 import { Request, Response } from "express";
 import { AppDataSource } from "../../config/database.js";
 import { env } from "../../config/env.js";

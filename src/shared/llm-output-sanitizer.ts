@@ -1,15 +1,41 @@
+/**
+ * @file llm-output-sanitizer.ts
+ * @description Utilidades de sanitización y defensa para validar la respuesta generada por los modelos de lenguaje (LLM).
+ * Protege contra fugas de prompts del sistema (prompt leakage), inyecciones de código, y envelopes JSON no deseados.
+ */
+
+/**
+ * Error lanzado cuando la salida del asistente no supera las validaciones de seguridad o formato.
+ */
 export class InvalidAssistantOutputError extends Error {
+  /**
+   * Crea una instancia de InvalidAssistantOutputError.
+   * 
+   * @param message - Detalle específico del motivo del rechazo de la salida.
+   */
   constructor(message: string) {
     super(message);
     this.name = "InvalidAssistantOutputError";
   }
 }
 
+/**
+ * Opciones de configuración para el sanitizador de respuestas.
+ */
 interface SanitizerOptions {
+  /**
+   * Permite envoltorios JSON (por ejemplo, si el LLM devuelve un objeto con un campo `text`).
+   */
   allowJsonEnvelope?: boolean;
+  /**
+   * Rechaza la respuesta si se detecta que parece código fuente o scripts inyectados.
+   */
   rejectCodeLikeContent?: boolean;
 }
 
+/**
+ * Patrones regex de código fuente para detectar scripts inyectados (JavaScript, HTML, SQL).
+ */
 const CODE_PATTERNS: RegExp[] = [
   /```[\s\S]*```/m,
   /^\s*(import|export|const|let|var|function|class)\b/m,
@@ -18,7 +44,9 @@ const CODE_PATTERNS: RegExp[] = [
   /<\/?(html|body|script|style)[^>]*>/i,
 ];
 
-// Patterns indicating the model may be leaking the system prompt or confirming a jailbreak.
+/**
+ * Patrones para detectar fugas de instrucciones de sistema (system prompt leaks) o jailbreaks exitosos.
+ */
 const OUTPUT_LEAK_PATTERNS: RegExp[] = [
   /<system_identity>/i,
   /<behavior_rules>/i,
@@ -33,6 +61,12 @@ const OUTPUT_LEAK_PATTERNS: RegExp[] = [
   /jailbreak\s+(successful|complete|activated)/i,
 ];
 
+/**
+ * Escanea el texto en busca de filtraciones o confirmaciones de jailbreak.
+ * 
+ * @param text - Texto generado por el asistente a analizar.
+ * @returns Un objeto que indica si hubo fuga y los patrones que coincidieron.
+ */
 export function detectOutputLeaks(text: string): { leaked: boolean; patterns: string[] } {
   const matched = OUTPUT_LEAK_PATTERNS
     .filter((p) => {
@@ -44,6 +78,12 @@ export function detectOutputLeaks(text: string): { leaked: boolean; patterns: st
   return { leaked: matched.length > 0, patterns: matched };
 }
 
+/**
+ * Intenta parsear una cadena como objeto JSON.
+ * 
+ * @param value - Cadena a parsear.
+ * @returns El objeto parseado o undefined si no es JSON válido.
+ */
 function tryParseJson(value: string): unknown | undefined {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -61,6 +101,12 @@ function tryParseJson(value: string): unknown | undefined {
   }
 }
 
+/**
+ * Extrae el campo de texto interno de un envoltorio JSON si existe.
+ * 
+ * @param parsed - El objeto parseado.
+ * @returns El texto extraído o undefined si no cumple con la estructura esperada.
+ */
 function extractTextFromJsonEnvelope(parsed: unknown): string | undefined {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return undefined;
@@ -73,6 +119,12 @@ function extractTextFromJsonEnvelope(parsed: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * Remueve bloques de formato de código (code fences ```).
+ * 
+ * @param text - Texto con posibles bloques de código de markdown.
+ * @returns Texto limpio sin los bloques de código externos.
+ */
 function stripSingleCodeFence(text: string): string {
   const match = text.trim().match(/^```[a-zA-Z0-9_-]*\s*\n([\s\S]*?)\n```$/);
   if (!match) {
@@ -82,10 +134,25 @@ function stripSingleCodeFence(text: string): string {
   return match[1]?.trim() ?? "";
 }
 
+/**
+ * Comprueba si el texto parece contener fragmentos de código fuente.
+ * 
+ * @param text - Texto a analizar.
+ * @returns Verdadero si coincide con algún patrón de código inyectado.
+ */
 function isCodeLike(text: string): boolean {
   return CODE_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+/**
+ * Sanitiza y valida la salida textual del modelo de lenguaje, aplicando filtros de seguridad estrictos.
+ * Procesa envolturas JSON y markdown fences, rechazando inyecciones y fugas del sistema.
+ * 
+ * @param rawText - Texto original entregado por el LLM.
+ * @param options - Opciones de control (permitir JSON envelope o rechazar formato tipo código).
+ * @returns Texto sanitizado y validado listo para su consumo o síntesis.
+ * @throws {InvalidAssistantOutputError} Si la salida está vacía, contiene código, revela el prompt de sistema o es inválida.
+ */
 export function sanitizeAssistantOutput(rawText: string, options: SanitizerOptions = {}): string {
   let text = (rawText ?? "").trim();
   if (!text) {

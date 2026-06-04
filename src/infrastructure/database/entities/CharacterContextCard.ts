@@ -1,3 +1,7 @@
+/**
+ * @file CharacterContextCard.ts
+ * @description Entidad de base de datos para las tarjetas de contexto de un personaje.
+ */
 import { Entity, Column, ManyToOne, JoinColumn, PrimaryGeneratedColumn, Index, Relation } from "typeorm";
 import { Character } from "./Character.js";
 

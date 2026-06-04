@@ -1,3 +1,7 @@
+/**
+ * @file knowledge-base.controller.ts
+ * @description Controlador HTTP para la carga y gestion de archivos en la base de conocimiento de los personajes.
+ */
 import { Request, RequestHandler, Response } from "express";
 import multer from "multer";
 import { AppDataSource } from "../../config/database.js";

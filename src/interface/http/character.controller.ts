@@ -1,3 +1,13 @@
+/**
+ * @file character.controller.ts
+ * @description Controlador HTTP principal para la gestion de personajes del sistema.
+ * Expone endpoints para consultar personajes (publicos y de usuario), crear, actualizar
+ * y eliminar personajes, acceder a sus datos editoriales estructurados por seccion
+ * (hero, overview, timeline, relations, gallery) y gestionar metadatos de voz.
+ * Incluye logica de firma de URLs de almacenamiento y limpieza de activos en Supabase Storage
+ * al eliminar un personaje o una conversacion asociada.
+ */
+
 import { Request, Response } from "express";
 import { AppDataSource } from "../../config/database.js";
 import { env } from "../../config/env.js";
@@ -20,7 +30,7 @@ import { serializeError } from "../../shared/errors.js";
 import { createSuffixedCharacterSlug, getCharacterSlugBase, normalizeCharacterSlug } from "../../shared/character-slug.js";
 import { generateTraceId } from "../../shared/trace.js";
 import { IStorageService } from "../../shared/types.js";
-import { createCharacterSchema } from "./schemas/character.schema.js";
+import { adminCharactersQuerySchema, createCharacterSchema, updateCharacterSchema } from "./schemas/character.schema.js";
 import { withSignedGalleryImageUrls, withSignedImageUrls, withSignedImageUrlsBatch } from "./presenters/character.presenter.js";
 
 const CHARACTER_IMAGE_BUCKET = "characters";
@@ -410,6 +420,45 @@ export class CharacterController {
     }
   }
 
+  async getAllAdmin(req: Request, res: Response) {
+    try {
+      const parsedQuery = adminCharactersQuerySchema.safeParse(req.query ?? {});
+
+      if (!parsedQuery.success) {
+        return res.status(400).json({ error: parsedQuery.error.issues[0].message });
+      }
+
+      const { page, limit, isPublic, userId } = parsedQuery.data;
+      const where: { isPublic?: boolean; userId?: string } = {};
+
+      if (typeof isPublic === "boolean") {
+        where.isPublic = isPublic;
+      }
+
+      if (userId) {
+        where.userId = userId;
+      }
+
+      const [characters, total] = await this.characterRepo.findAndCount({
+        where,
+        order: { createdAt: "DESC" },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+
+      const data = await withSignedImageUrlsBatch(this.storage, characters, env.SIGNED_URL_EXPIRES_SECONDS);
+
+      return res.json({
+        data,
+        total,
+        page,
+        limit,
+      });
+    } catch (error) {
+      this.handleError(res, "getAllAdmin", error);
+    }
+  }
+
   async getById(req: Request, res: Response) {
     try {
       const id = this.getCharacterIdParam(req);
@@ -708,6 +757,29 @@ export class CharacterController {
       return res.status(201).json(result);
     } catch (error) {
       this.handleError(res, "create", error);
+    }
+  }
+
+  async update(req: Request, res: Response) {
+    try {
+      const id = this.getCharacterIdParam(req);
+
+      const parsed = updateCharacterSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.issues[0].message });
+      }
+
+      const character = await this.characterRepo.findOne({ where: { id: id as any } });
+      if (!character) {
+        return res.status(404).json({ error: "Personaje no encontrado" });
+      }
+
+      Object.assign(character, parsed.data);
+      const saved = await this.characterRepo.save(character);
+      const result = await withSignedImageUrls(this.storage, saved, env.SIGNED_URL_EXPIRES_SECONDS);
+      return res.status(200).json(result);
+    } catch (error) {
+      this.handleError(res, "update", error);
     }
   }
 

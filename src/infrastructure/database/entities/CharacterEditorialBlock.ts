@@ -1,3 +1,7 @@
+/**
+ * @file CharacterEditorialBlock.ts
+ * @description Entidad de base de datos para bloques editoriales personalizados de un personaje.
+ */
 import { Entity, Column, ManyToOne, JoinColumn, PrimaryGeneratedColumn, Index, Relation } from "typeorm";
 import { Character } from "./Character.js";
 

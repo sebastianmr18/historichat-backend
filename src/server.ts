@@ -1,3 +1,7 @@
+/**
+ * @file server.ts
+ * @description Punto de entrada de la aplicacion que inicializa la base de datos, servicios, HTTP y WebSockets.
+ */
 import "reflect-metadata";
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';

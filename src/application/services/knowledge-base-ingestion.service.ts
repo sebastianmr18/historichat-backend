@@ -1,3 +1,10 @@
+/**
+ * @file knowledge-base-ingestion.service.ts
+ * @description Servicio encargado de la ingesta de archivos de base de conocimientos.
+ * Lee archivos de texto, markdown o PDF, los divide en fragmentos (chunks) y los indexa
+ * en la base de datos vectorial ChromaDB tras aplicar sanitizaciones de seguridad.
+ */
+
 import crypto from "crypto";
 import { DataSource } from "typeorm";
 import { PDFParse } from "pdf-parse";
@@ -11,7 +18,17 @@ import {
   KnowledgeBaseUploadResult,
 } from "../../domain/rag/knowledge-base.types.js";
 
+/**
+ * Excepcion personalizada para los errores surgidos durante el proceso de ingesta
+ * de la base de conocimientos.
+ */
 export class KnowledgeBaseIngestionError extends Error {
+  /**
+   * Crea una instancia de KnowledgeBaseIngestionError.
+   *
+   * @param code - Codigo del tipo de error especifico.
+   * @param message - Mensaje descriptivo detallado del error.
+   */
   constructor(
     public readonly code:
       | "CHARACTER_NOT_FOUND"
@@ -26,23 +43,50 @@ export class KnowledgeBaseIngestionError extends Error {
   }
 }
 
+/**
+ * Opciones de configuracion interna para la generacion de fragmentos (chunking) de texto.
+ */
 interface KnowledgeBaseIngestionOptions {
+  /** Tamano maximo en caracteres de cada fragmento. */
   chunkSize: number;
+  /** Cantidad de caracteres superpuestos entre fragmentos adyacentes para no perder contexto. */
   chunkOverlap: number;
 }
 
+/**
+ * Opciones por defecto para la division de textos.
+ */
 const DEFAULT_OPTIONS: KnowledgeBaseIngestionOptions = {
   chunkSize: 1200,
   chunkOverlap: 150,
 };
 
+/**
+ * Servicio que gestiona la ingesta de documentos para la base de conocimientos RAG.
+ */
 export class KnowledgeBaseIngestionService {
+  /**
+   * Crea una instancia de KnowledgeBaseIngestionService.
+   *
+   * @param dataSource - Conexion a la base de datos relacional para validar los permisos y buscar personajes.
+   * @param chromaRepository - Repositorio para la insercion e indexacion en la base vectorial.
+   * @param options - Configuracion del tamano y solapamiento de los fragmentos (opcional).
+   */
   constructor(
     private readonly dataSource: DataSource,
     private readonly chromaRepository: ChromaRepository,
     private readonly options: KnowledgeBaseIngestionOptions = DEFAULT_OPTIONS,
   ) {}
 
+  /**
+   * Sube un archivo a la base de conocimientos de un personaje.
+   * Valida permisos, extrae el texto del archivo (soporta TXT, MD y PDF), lo fragmenta,
+   * y guarda el resultado en el almacen vectorial indexado ChromaDB.
+   *
+   * @param input - Parametros de entrada con los datos del archivo y el usuario solicitante.
+   * @returns Resumen de los datos de indexacion e informacion del archivo.
+   * @throws KnowledgeBaseIngestionError si el archivo esta vacio, no tiene permisos, no es soportado o falla la indexacion.
+   */
   async uploadCharacterKnowledgeBase(input: KnowledgeBaseUploadInput): Promise<KnowledgeBaseUploadResult> {
     if (!input.fileBuffer.length) {
       throw new KnowledgeBaseIngestionError("EMPTY_FILE", "El archivo esta vacio.");
@@ -133,6 +177,15 @@ export class KnowledgeBaseIngestionService {
     };
   }
 
+  /**
+   * Extrae el contenido de texto plano de un archivo segun su tipo MIME.
+   * Soporta archivos de texto plano, markdown y documentos PDF.
+   *
+   * @param fileBuffer - Buffer binario del archivo.
+   * @param mimeType - Tipo MIME del archivo.
+   * @returns Cadena con el texto plano extraido.
+   * @throws KnowledgeBaseIngestionError si el tipo MIME no esta soportado.
+   */
   private async parseFileText(fileBuffer: Buffer, mimeType: string): Promise<string> {
     if (mimeType === "text/plain" || mimeType === "text/markdown") {
       return fileBuffer.toString("utf8");
@@ -154,6 +207,13 @@ export class KnowledgeBaseIngestionService {
     );
   }
 
+  /**
+   * Divide un texto completo en multiples fragmentos estructurados aplicando sanitizacion.
+   *
+   * @param text - Texto limpio extraido del archivo.
+   * @param metadataBase - Metadatos base a adjuntar a cada fragmento.
+   * @returns Lista de fragmentos estructurados con sus respectivos identificadores.
+   */
   private buildChunks(
     text: string,
     metadataBase: {

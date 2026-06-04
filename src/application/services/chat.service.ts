@@ -1,3 +1,12 @@
+/**
+ * @file chat.service.ts
+ * @description Servicio principal del sistema de chat.
+ * Gestiona el procesamiento de mensajes (tanto de texto como de audio), la interaccion
+ * con proveedores de modelos de lenguaje (LLM), la generacion y reproduccion de voz (TTS/STT),
+ * la recuperacion de base de conocimientos vectoriales (RAG) y coordina el flujo complejo
+ * del modo debate (turnos y toma de decisiones).
+ */
+
 import { Character } from "../../infrastructure/database/entities/Character.js";
 import { Conversation } from "../../infrastructure/database/entities/Conversation.js";
 import { Message } from "../../infrastructure/database/entities/Message.js";
@@ -36,8 +45,10 @@ import { sanitizeAssistantOutput } from "../../shared/llm-output-sanitizer.js";
 import { sanitizePromptField } from "../prompts/prompt-field-sanitizer.js";
 import { detectDebateMentionedSpeaker } from "./speaker-mention-detector.js";
 
+/** Longitud maxima permitida para el mensaje del usuario. */
 const MAX_USER_MESSAGE_LENGTH = 8000;
 
+/** Estructura interna de salida tras evaluar un turno de debate. */
 interface DebateDecisionOutput {
   action: "respond" | "skip";
   text?: string;
@@ -46,13 +57,16 @@ interface DebateDecisionOutput {
   skipReason?: DebateSkipReason;
 }
 
+/** Origen del formato en que se parseo la decision del debate. */
 type DebateDecisionSource = "native_object" | "text_json" | "text_fenced_json" | "text_embedded_json";
 
+/** Estructura del resultado de parsear una decision en el debate. */
 interface DebateDecisionParseResult {
   decision: DebateDecisionOutput | null;
   source: DebateDecisionSource | null;
 }
 
+/** Opciones adicionales de procesamiento para debates. */
 interface DebateProcessOptions {
   forcedSpeakerId?: string | null;
   manualSkips?: Record<string, string | undefined>;
@@ -62,6 +76,7 @@ interface DebateProcessOptions {
   };
 }
 
+/** Planificacion de orador e identidad para el modo debate. */
 interface DebateSpeakerPlan {
   speaker: Character;
   opponent: Character;
@@ -69,7 +84,23 @@ interface DebateSpeakerPlan {
   isForced: boolean;
 }
 
+/**
+ * Servicio encargado de gestionar y procesar la logica de mensajeria de los bots de personajes,
+ * incluyendo los modos entrevista, llamada de voz y debate multilenguaje.
+ */
 export class ChatService {
+  /**
+   * Crea una instancia de ChatService.
+   *
+   * @param llm - Proveedor de modelos LLM.
+   * @param voice - Proveedor de servicios TTS (Text-to-Speech) y STT (Speech-to-Text).
+   * @param vectorStore - Repositorio de base vectorial ChromaDB.
+   * @param storageService - Servicio de almacenamiento de archivos.
+   * @param conversationRepo - Repositorio para la gestion de conversaciones.
+   * @param messageRepo - Repositorio para la gestion de mensajes.
+   * @param dataSource - Origen de datos para transacciones y consultas complejas.
+   * @param storageBucket - Nombre del bucket de almacenamiento para audios.
+   */
   constructor(
     private llm: LlmProvider,
     private voice: ITextToSpeech & ISpeechToText,
@@ -160,10 +191,40 @@ export class ChatService {
   private async loadConversationHistory(conversationId: string, take = 6) {
     const messages = await this.messageRepo.find({
       where: { conversationId },
-      order: { timestamp: "ASC", id: "ASC" },
+      relations: {
+        speakerCharacter: true,
+      },
+      // Fetch newest first, then restore chronological order for model input.
+      order: { timestamp: "DESC", id: "DESC" },
       take,
     });
-    return messages.filter((m) => m.role === "user" || m.role === "assistant");
+    return messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .reverse();
+  }
+
+  private buildDebateHistoryMessages(
+    history: Message[],
+    currentSpeaker: { id: string; name: string },
+    opponent: { id: string; name: string },
+  ): Array<Pick<Message, "role" | "content">> {
+    return history.map((message) => {
+      if (message.role === "user") {
+        return { role: "user", content: `Usuario: ${message.content}` };
+      }
+
+      const speakerName =
+        message.speakerCharacterId === currentSpeaker.id
+          ? currentSpeaker.name
+          : message.speakerCharacterId === opponent.id
+            ? opponent.name
+            : message.speakerCharacter?.name ?? "Participante";
+
+      return {
+        role: "assistant",
+        content: `${speakerName}: ${message.content}`,
+      };
+    });
   }
 
   private async synthesizeAndUpload(
@@ -246,6 +307,15 @@ export class ChatService {
       params.character.vectorDbName || "default"
     );
 
+    const historyForModel =
+      params.mode === "debate" && params.debate
+        ? this.buildDebateHistoryMessages(
+            history as Message[],
+            params.debate.currentSpeaker,
+            params.debate.opponent,
+          )
+        : history;
+
     const systemPrompt = buildModeSystemPrompt({
       character: params.character,
       mode: params.mode,
@@ -258,7 +328,7 @@ export class ChatService {
       characterId: params.character.id,
       characterName: params.character.name,
       mode: params.mode,
-      historyCount: history.length,
+      historyCount: historyForModel.length,
       userTextLength: params.userText.length,
       contextLength: context?.length ?? 0,
       systemPromptLength: systemPrompt.length,
@@ -269,7 +339,7 @@ export class ChatService {
     // Generate main AI response
     const aiResponse = await this.llm.generateResponse(
       systemPrompt,
-      history as any,
+      historyForModel as any,
       params.userText,
       context
     );
@@ -285,7 +355,7 @@ export class ChatService {
       try {
         const suggestionsPrompt = buildModeSuggestionsPrompt({
           mode: params.mode,
-          lastMessages: history,
+          lastMessages: historyForModel,
           characterName: params.characterName ?? params.character.name,
           debate: params.debate,
         });
@@ -525,15 +595,21 @@ export class ChatService {
   private async generateDebateRoundSuggestions(params: {
     conversationId: string;
     userText: string;
-    history: Array<Pick<Message, "role" | "content">>;
+    history: Message[];
     currentSpeaker: Character;
     opponent: Character;
     traceCtx: Record<string, unknown>;
   }): Promise<string[] | undefined> {
     try {
+      const labeledHistory = this.buildDebateHistoryMessages(
+        params.history,
+        params.currentSpeaker,
+        params.opponent,
+      );
+
       const suggestionsPrompt = buildModeSuggestionsPrompt({
         mode: "debate",
-        lastMessages: params.history,
+        lastMessages: labeledHistory,
         characterName: params.currentSpeaker.name,
         debate: {
           currentSpeaker: {
@@ -1096,6 +1172,11 @@ export class ChatService {
 
     for (const plan of plans) {
       const manualSkipReason = manualSkips[plan.speaker.id];
+      const debateHistoryForTurn = this.buildDebateHistoryMessages(
+        roundHistory as Message[],
+        plan.speaker,
+        plan.opponent,
+      );
 
       logger.debug("[chat.processDebateMessage] debate_turn_evaluation_started", {
         ...traceCtx,
@@ -1202,7 +1283,7 @@ export class ChatService {
       try {
         const aiDecision = await this.llm.generateResponse(
           systemPrompt,
-          roundHistory as Message[],
+          debateHistoryForTurn,
           userText,
           context,
           debateTurnSchema
@@ -1468,7 +1549,15 @@ export class ChatService {
 
       callbacks?.onTurnReady({ ...turnResult, turnOrder: plan.turnOrder });
       responses.push(turnResult);
-      roundHistory.push({ role: "assistant", content: responseText });
+      roundHistory.push({
+        role: "assistant",
+        content: responseText,
+        speakerCharacterId: plan.speaker.id,
+        speakerCharacter: {
+          id: plan.speaker.id,
+          name: plan.speaker.name,
+        } as Character,
+      } as Message);
     }
 
     const nextSpeakerId = effectiveForcedSpeakerId
@@ -1498,14 +1587,19 @@ export class ChatService {
 
     const nextSpeaker = nextSpeakerId === speakerB.id ? speakerB : speakerA;
     const opponent = nextSpeaker.id === speakerA.id ? speakerB : speakerA;
-    const suggestionHistory: Array<Pick<Message, "role" | "content">> = [
+    const suggestionHistory: Message[] = [
       ...baseHistory,
-      { role: "user", content: userText },
+      { role: "user", content: userText } as Message,
       ...responses
         .filter((response): response is DebateTurnCharacterResult & { text: string } =>
           !response.skipped && Boolean(response.text)
         )
-        .map((response) => ({ role: "assistant" as const, content: response.text! })),
+        .map((response) => ({
+          role: "assistant" as const,
+          content: response.text!,
+          speakerCharacterId: response.speakerId,
+          speakerCharacter: { id: response.speakerId, name: response.speakerName } as Character,
+        } as Message)),
     ];
 
     const suggestions = await this.generateDebateRoundSuggestions({

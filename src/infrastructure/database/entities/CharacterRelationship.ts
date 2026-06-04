@@ -1,3 +1,7 @@
+/**
+ * @file CharacterRelationship.ts
+ * @description Entidad de base de datos para las relaciones de un personaje con otros.
+ */
 import { Entity, Column, ManyToOne, JoinColumn, PrimaryGeneratedColumn, Index, OneToMany, Relation } from "typeorm";
 import { Character } from "./Character.js";
 import { CharacterTimelineRelationship } from "./CharacterTimelineRelationship.js";

@@ -1,4 +1,14 @@
+/**
+ * @file live-call.service.ts
+ * @description Servicio encargado de coordinar sesiones de llamadas en tiempo real por voz.
+ * Controla la conexion con la API en tiempo real de Gemini (GeminiLiveAdapter), gestiona el estado
+ * de la sesion, procesa los fragmentos de audio entrantes/salientes, ejecuta busquedas RAG en base a tool calls
+ * de Gemini y controla temporizadores de inactividad de las llamadas.
+ */
+
 import type { FunctionCall, Session } from '@google/genai';
+import fs from 'fs';
+import path from 'path';
 import type {
   LiveSessionState,
   LiveStartPayload,
@@ -10,13 +20,30 @@ import { logger } from '../../infrastructure/logging/logger.js';
 import type { ChromaRepository } from '../../infrastructure/vector/chroma.repository.js';
 import type { IRepository } from '../../domain/repositories/repository.interfaces.js';
 import { buildModeSystemPrompt } from '../prompts/system-prompt-builder.js';
+import { env } from '../../config/env.js';
 
-const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+/** Tiempo maximo de inactividad permitido (5 minutos) antes de terminar la llamada. */
+const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
+/** Voz por defecto utilizada en la sesion de Gemini en tiempo real si el personaje no define una. */
 const DEFAULT_VOICE = 'Kore';
 
+/**
+ * Servicio de backend para la gestion de llamadas en tiempo real con personajes de IA.
+ */
 export class LiveCallService {
+  /**
+   * Mapa en memoria que gestiona el estado de las sesiones activas,
+   * utilizando el socketId del cliente como clave.
+   */
   private sessions = new Map<string, LiveSessionState>();
 
+  /**
+   * Crea una instancia de LiveCallService.
+   *
+   * @param geminiLive - Adaptador para interactuar con la API de transmision en vivo de Gemini.
+   * @param vectorStore - Repositorio de base de datos vectorial para consultas RAG en tiempo real.
+   * @param characterRepo - Repositorio relacional para obtener informacion del personaje.
+   */
   constructor(
     private geminiLive: GeminiLiveAdapter,
     private vectorStore: ChromaRepository,
@@ -27,6 +54,15 @@ export class LiveCallService {
   // Public API
   // ---------------------------------------------------------------------------
 
+  /**
+   * Inicia una nueva llamada de voz en tiempo real para un socket y usuario determinados.
+   * Si ya existia una sesion activa en el mismo socket, la cierra primero de forma limpia.
+   *
+   * @param socketId - Identificador del socket de la conexion.
+   * @param userId - Identificador del usuario.
+   * @param payload - Payload con los parametros de inicio (ID del personaje).
+   * @param emitter - Emisor de eventos especifico de la sesion del socket para comunicarse con el cliente.
+   */
   async startSession(
     socketId: string,
     userId: string,
@@ -47,6 +83,12 @@ export class LiveCallService {
     await this.connectGemini(state, callbacks, emitter, sessionId, character);
   }
 
+  /**
+   * Retransmite un buffer de audio enviado por el cliente directamente a la conexion activa de Gemini.
+   *
+   * @param socketId - Identificador del socket del cliente.
+   * @param audioBuffer - Buffer binario con los datos de audio en bruto del microfono.
+   */
   relayAudio(socketId: string, audioBuffer: ArrayBuffer): void {
     const state = this.sessions.get(socketId);
     if (!state?.geminiSession) return;
@@ -57,14 +99,32 @@ export class LiveCallService {
     state.lastActivityAt = Date.now();
   }
 
+  /**
+   * Finaliza una sesion de llamada activa a peticion explicita del usuario.
+   *
+   * @param socketId - Identificador del socket del cliente.
+   * @param emitter - Emisor de eventos de la sesion para notificar el fin (opcional).
+   */
   stopSession(socketId: string, emitter?: LiveSessionEmitter): void {
     this.terminateSession(socketId, 'user_request', emitter);
   }
 
+  /**
+   * Gestiona el evento de desconexion del socket finalizando de forma abrupta la llamada.
+   *
+   * @param socketId - Identificador del socket desconectado.
+   */
   handleDisconnect(socketId: string): void {
     this.terminateSession(socketId, 'user_request');
   }
 
+  /**
+   * Maneja el cambio de estado de silencio (mute) en el cliente.
+   * Actualmente se utiliza solo con fines de registro/logging.
+   *
+   * @param socketId - Identificador del socket del cliente.
+   * @param muted - Indica si el microfono del cliente esta silenciado.
+   */
   handleMute(socketId: string, muted: boolean): void {
     logger.debug('[live-call.service] mute status changed', { socketId, muted });
   }
@@ -73,6 +133,13 @@ export class LiveCallService {
   // Private helpers
   // ---------------------------------------------------------------------------
 
+  /**
+   * Carga el personaje de la base de datos y envia un evento de error si no existe.
+   *
+   * @param characterId - Identificador del personaje.
+   * @param emitter - Emisor de eventos para reportar el error en caso de fallo.
+   * @returns La entidad del personaje o null si no se encuentra.
+   */
   private async loadCharacter(
     characterId: string,
     emitter: LiveSessionEmitter,
@@ -91,6 +158,15 @@ export class LiveCallService {
     return character;
   }
 
+  /**
+   * Inicializa el objeto que representa el estado de una sesion activa de llamada.
+   *
+   * @param socketId - Identificador del socket.
+   * @param userId - Identificador del usuario.
+   * @param payload - Payload de inicio.
+   * @param character - Entidad del personaje.
+   * @returns Estructura de estado inicializada.
+   */
   private buildSessionState(
     socketId: string,
     userId: string,
@@ -112,6 +188,17 @@ export class LiveCallService {
     };
   }
 
+  /**
+   * Establece conexion websocket con la API en tiempo real de Gemini.
+   * Envia las instrucciones de sistema, la configuracion de voz del personaje
+   * y configura la sesion en el mapa en memoria de llamadas activas.
+   *
+   * @param state - Estado de la sesion local actual.
+   * @param callbacks - Callbacks definidos para procesar eventos del websocket de Gemini.
+   * @param emitter - Emisor de eventos del socket del cliente.
+   * @param sessionId - Identificador unico asignado a la sesion de llamada.
+   * @param character - Entidad del personaje.
+   */
   private async connectGemini(
     state: LiveSessionState,
     callbacks: GeminiLiveCallbacks,
@@ -164,6 +251,14 @@ export class LiveCallService {
     }
   }
 
+  /**
+   * Finaliza una llamada por cualquier motivo (peticion, cierre de Gemini, timeout, error).
+   * Cierra las conexiones activas, persiste el historial de transcripciones (si aplica) y limpia los timers.
+   *
+   * @param socketId - Identificador del socket del cliente.
+   * @param reason - Causa de la terminacion de la llamada.
+   * @param emitter - Emisor del cliente para enviarle el evento 'ended'.
+   */
   private terminateSession(
     socketId: string,
     reason: 'user_request' | 'gemini_closed' | 'timeout' | 'error',
@@ -186,10 +281,68 @@ export class LiveCallService {
       this.geminiLive.closeSession(state.geminiSession as Session);
     }
 
+    this.persistTranscriptForTesting(state, reason, durationMs);
+
     emitter?.emitEnded({ reason, durationMs });
     this.cleanupSession(socketId);
   }
 
+  /**
+   * Guarda de forma local en disco la transcripcion completa de la conversacion para fines de pruebas
+   * si la variable de entorno correspondiente esta activada.
+   *
+   * @param state - Estado de la sesion terminada.
+   * @param reason - Causa de finalizacion.
+   * @param durationMs - Duracion total de la llamada en milisegundos.
+   */
+  private persistTranscriptForTesting(
+    state: LiveSessionState,
+    reason: 'user_request' | 'gemini_closed' | 'timeout' | 'error',
+    durationMs: number,
+  ): void {
+    if (!env.LIVE_CALL_TEST_LOGGER_ENABLED) {
+      return;
+    }
+
+    try {
+      const logsDir = path.isAbsolute(env.LIVE_CALL_TEST_LOGGER_DIR)
+        ? env.LIVE_CALL_TEST_LOGGER_DIR
+        : path.resolve(process.cwd(), env.LIVE_CALL_TEST_LOGGER_DIR);
+      fs.mkdirSync(logsDir, { recursive: true });
+
+      const output = {
+        generatedAt: new Date().toISOString(),
+        socketId: state.socketId,
+        userId: state.userId,
+        characterId: state.characterId,
+        reason,
+        durationMs,
+        transcriptHistory: state.transcriptHistory,
+      };
+
+      const filePath = path.join(logsDir, `live-call-${state.socketId}-${Date.now()}.json`);
+      fs.writeFileSync(filePath, JSON.stringify(output, null, 2), 'utf8');
+      logger.info('[live-call.service] test transcript persisted', {
+        socketId: state.socketId,
+        filePath,
+      });
+    } catch (error) {
+      logger.error('[live-call.service] failed to persist test transcript', {
+        socketId: state.socketId,
+        error,
+      });
+    }
+  }
+
+  /**
+   * Construye el conjunto de callbacks que responderan a los eventos enviados por el WebSocket
+   * de transmision en vivo de Gemini.
+   *
+   * @param state - Estado de la sesion local.
+   * @param emitter - Emisor del cliente para redirigir audios y transcripciones.
+   * @param sessionId - Identificador unico de la llamada.
+   * @returns Callbacks estructurados requeridos por GeminiLiveAdapter.
+   */
   private buildGeminiCallbacks(
     state: LiveSessionState,
     emitter: LiveSessionEmitter,
@@ -219,7 +372,7 @@ export class LiveCallService {
 
       onInterrupted: () => {
         emitter.emitInterrupted();
-        // Reset model buffer since the response was cut off
+        // Reiniciar el buffer del modelo porque su respuesta fue interrumpida/cortada
         state.transcriptBuffer.model = '';
       },
 
@@ -260,6 +413,13 @@ export class LiveCallService {
     };
   }
 
+  /**
+   * Envia las transcripciones del bufer temporal acumulado durante el turno al socket
+   * del cliente y las guarda en el historial de la llamada.
+   *
+   * @param state - Estado de la llamada.
+   * @param emitter - Emisor del cliente.
+   */
   private flushTranscriptBuffer(state: LiveSessionState, emitter: LiveSessionEmitter): void {
     const { transcriptBuffer } = state;
     const now = Date.now();
@@ -293,6 +453,16 @@ export class LiveCallService {
     }
   }
 
+  /**
+   * Procesa las llamadas a herramientas (RAG Tool Calls) gatilladas de forma autonoma por Gemini.
+   * Realiza la busqueda de informacion contextual en ChromaDB y envia el fragmento recuperado
+   * de vuelta a la sesion del LLM para enriquecer su base de conocimientos durante la llamada.
+   *
+   * @param state - Estado de la llamada.
+   * @param functionCalls - Lista de llamadas a funciones enviadas por Gemini.
+   * @param emitter - Emisor del cliente.
+   * @param sessionId - ID de la sesion.
+   */
   private async handleRagToolCall(
     state: LiveSessionState,
     functionCalls: FunctionCall[],
@@ -350,12 +520,20 @@ export class LiveCallService {
     emitter.emitSearching({ isSearching: false });
   }
 
+  /**
+   * Resetea el temporizador de inactividad de una llamada.
+   * Comprueba periodicamente cada 30 segundos si ha transcurrido mas del tiempo limite permitido
+   * sin transmision de audio o actividad de usuario para terminar la llamada por inactividad.
+   *
+   * @param state - Estado de la sesion de llamada.
+   * @param emitter - Emisor del cliente.
+   */
   private resetInactivityTimer(state: LiveSessionState, emitter: LiveSessionEmitter | null): void {
     if (state.inactivityTimer) {
       clearInterval(state.inactivityTimer);
     }
 
-    // Check every 30s instead of resetting setTimeout on every audio chunk
+    // Comprobar cada 30s en lugar de recrear un setTimeout en cada trozo de audio (mas eficiente)
     state.inactivityTimer = setInterval(() => {
       const idleMs = Date.now() - state.lastActivityAt;
       if (idleMs < INACTIVITY_TIMEOUT_MS) return;
@@ -377,6 +555,11 @@ export class LiveCallService {
     }, 30_000);
   }
 
+  /**
+   * Elimina y limpia las referencias e intervalos de una llamada del mapa en memoria.
+   *
+   * @param socketId - Identificador de socket de la llamada a limpiar.
+   */
   private cleanupSession(socketId: string): void {
     const state = this.sessions.get(socketId);
     if (!state) return;
