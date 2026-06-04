@@ -1,3 +1,10 @@
+/**
+ * @file env.ts
+ * @description Configuración y validación de las variables de entorno de la aplicación.
+ * Define el esquema esperado para la configuración del sistema mediante Zod y exporta
+ * el objeto de entorno validado y tipado de forma estricta.
+ */
+
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from "path";
@@ -6,6 +13,10 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
+/**
+ * Esquema de validación para las variables de entorno de la aplicación utilizando Zod.
+ * Define tipos, valores por defecto y transformaciones requeridas para el entorno.
+ */
 const envSchema = z.object({
   PORT: z.string().default('8000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -37,6 +48,9 @@ const envSchema = z.object({
   CHROMA_TENANT: z.string().default('default_tenant'),
   CHROMA_DATABASE: z.string().default('default_database'),
   CHROMA_HOST: z.string().optional(),
+  CHROMA_OPERATION_MAX_RETRIES: z.coerce.number().int().min(1).max(10).default(5),
+  CHROMA_OPERATION_BASE_DELAY_MS: z.coerce.number().int().min(50).max(10000).default(300),
+  CHROMA_OPERATION_MAX_DELAY_MS: z.coerce.number().int().min(100).max(30000).default(3000),
   KB_UPLOAD_MAX_FILE_SIZE_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
   KB_CHUNK_SIZE: z.coerce.number().int().min(200).max(8000).default(1200),
   KB_CHUNK_OVERLAP: z.coerce.number().int().min(0).max(2000).default(150),
@@ -44,6 +58,8 @@ const envSchema = z.object({
   DEBATE_SKIP_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.35),
   DEBATE_SPEAKER_INFERENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.7),
   GEMINI_LIVE_MODEL: z.string().default('gemini-2.5-flash-native-audio-preview-12-2025'),
+  LIVE_CALL_TEST_LOGGER_ENABLED: z.coerce.boolean().default(false),
+  LIVE_CALL_TEST_LOGGER_DIR: z.string().default('testing/outputs/p6-ux/live-call-logs'),
 });
 
 const _env = envSchema.safeParse(process.env);
@@ -53,4 +69,8 @@ if (!_env.success) {
   process.exit(1);
 }
 
+/**
+ * Objeto de configuración validado y fuertemente tipado de la aplicación.
+ * Proporciona acceso seguro y centralizado a todas las variables de entorno definidas.
+ */
 export const env = _env.data;

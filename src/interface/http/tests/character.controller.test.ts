@@ -43,6 +43,7 @@ describe("CharacterController", () => {
     create: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
     find: ReturnType<typeof vi.fn>;
+    findAndCount: ReturnType<typeof vi.fn>;
   };
   let conversationRepo: { find: ReturnType<typeof vi.fn> };
   let messageRepo: { find: ReturnType<typeof vi.fn> };
@@ -63,6 +64,7 @@ describe("CharacterController", () => {
       create: vi.fn((value) => value),
       save: vi.fn(),
       find: vi.fn(),
+      findAndCount: vi.fn(),
       findOne: vi.fn(),
       delete: vi.fn(),
     };
@@ -112,6 +114,7 @@ describe("CharacterController", () => {
     characterRepo.create.mockImplementation((value) => value);
     characterRepo.save.mockReset();
     characterRepo.find.mockReset();
+    characterRepo.findAndCount.mockReset();
     conversationRepo.find.mockReset();
     messageRepo.find.mockReset();
     galleryImageRepo.find.mockReset();
@@ -362,6 +365,89 @@ describe("CharacterController", () => {
       await controller.getAll(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("getAllAdmin", () => {
+    it("returns paginated list of all characters with default pagination", async () => {
+      const req = { query: {} } as unknown as Request;
+      const res = createResponse();
+
+      characterRepo.findAndCount.mockResolvedValue([
+        [{ id: "c1", name: "Einstein", imageUrl: null, backgroundImageUrl: null }],
+        1,
+      ]);
+
+      await controller.getAllAdmin(req, res);
+
+      expect(characterRepo.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {},
+          order: { createdAt: "DESC" },
+          skip: 0,
+          take: 20,
+        }),
+      );
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([expect.objectContaining({ id: "c1" })]),
+          total: 1,
+          page: 1,
+          limit: 20,
+        }),
+      );
+    });
+
+    it("applies filters and custom pagination", async () => {
+      const req = {
+        query: {
+          page: "2",
+          limit: "5",
+          isPublic: "false",
+          userId: "550e8400-e29b-41d4-a716-446655440000",
+        },
+      } as unknown as Request;
+      const res = createResponse();
+
+      characterRepo.findAndCount.mockResolvedValue([[], 0]);
+
+      await controller.getAllAdmin(req, res);
+
+      expect(characterRepo.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { isPublic: false, userId: "550e8400-e29b-41d4-a716-446655440000" },
+          skip: 5,
+          take: 5,
+        }),
+      );
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ total: 0, page: 2, limit: 5 }),
+      );
+    });
+
+    it("returns 400 when query params are invalid", async () => {
+      const req = { query: { limit: "999" } } as unknown as Request;
+      const res = createResponse();
+
+      await controller.getAllAdmin(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: expect.any(String) }),
+      );
+      expect(characterRepo.findAndCount).not.toHaveBeenCalled();
+    });
+
+    it("returns 500 on repository error", async () => {
+      const req = { query: {} } as unknown as Request;
+      const res = createResponse();
+
+      characterRepo.findAndCount.mockRejectedValue(new Error("DB error"));
+
+      await controller.getAllAdmin(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: "Internal Server Error" });
     });
   });
 

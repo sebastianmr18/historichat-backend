@@ -1,3 +1,11 @@
+/**
+ * @file llm-orchestrator.service.ts
+ * @description Orquestador de proveedores de modelos LLM.
+ * Implementa un patron de failover/fallback secuencial: si un proveedor principal falla
+ * (por ejemplo, por limites de tasa, timeouts o errores de red), delega de forma transparente
+ * la generacion de la respuesta al siguiente proveedor secundario configurado.
+ */
+
 import { logger } from "../logging/logger.js";
 import {
   LlmGenerateResponse,
@@ -7,12 +15,37 @@ import {
 } from "./llm-provider.interface.js";
 import { InvalidAssistantOutputError, sanitizeAssistantOutput } from "../../shared/llm-output-sanitizer.js";
 
+/**
+ * Servicio orquestador que implementa LlmProvider.
+ * Encapsula una lista ordenada de proveedores de LLM y maneja fallbacks.
+ */
 export class LlmOrchestratorService implements LlmProvider {
+  /** Nombre identificativo del orquestador. */
   public readonly providerName = "orchestrator";
+  /** Nombre identificador del modelo del orquestador. */
   public readonly modelName = "fallback";
 
+  /**
+   * Crea una instancia de LlmOrchestratorService.
+   *
+   * @param providers - Lista de proveedores ordenados por prioridad de ejecucion.
+   */
   constructor(private readonly providers: LlmProvider[]) {}
 
+  /**
+   * Intenta generar una respuesta con el primer proveedor de la lista.
+   * Si falla, captura el error y prueba con el siguiente (fallback), repitiendo la operacion
+   * hasta agotar los proveedores o tener exito.
+   * Aplica ademas sanitizacion del texto del asistente (a no ser que se pida salida estructurada JSON).
+   *
+   * @param systemPrompt - Instrucciones de comportamiento del sistema.
+   * @param history - Historial de la conversacion.
+   * @param userQuery - Consulta del usuario.
+   * @param contextRag - Contexto documental del RAG (opcional).
+   * @param responseSchema - Esquema de validacion de salida (opcional).
+   * @returns La respuesta exitosa generada por uno de los proveedores.
+   * @throws El ultimo error capturado si todos los proveedores fallan.
+   */
   async generateResponse(
     systemPrompt: string,
     history: LlmHistoryMessage[],

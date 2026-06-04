@@ -1,26 +1,38 @@
+/**
+ * @file google-cloud-voice.adapter.ts
+ * @description Adaptador de infraestructura para los servicios de voz de Google Cloud (Text-to-Speech y Speech-to-Text).
+ * Requiere que la variable de entorno GOOGLE_APPLICATION_CREDENTIALS este configurada con la ruta a las credenciales de GCP.
+ */
+
 import speech from '@google-cloud/speech';
 import textToSpeech from '@google-cloud/text-to-speech';
 import { ITextToSpeech, ISpeechToText } from '../../shared/types.js';
 import { logger } from '../logging/logger.js';
 
 /**
- * Adaptador de infraestructura para Google Cloud Voice Services.
- * Requiere que GOOGLE_APPLICATION_CREDENTIALS esté configurado en el entorno.
+ * Adaptador que implementa ITextToSpeech e ISpeechToText utilizando la API de Google Cloud.
  */
 export class GoogleCloudVoiceAdapter implements ITextToSpeech, ISpeechToText {
+  /** Cliente del servicio Text-to-Speech de Google. */
   private ttsClient: textToSpeech.TextToSpeechClient;
+  /** Cliente del servicio Speech-to-Text de Google. */
   private sttClient: speech.SpeechClient;
 
+  /**
+   * Crea una instancia de GoogleCloudVoiceAdapter e inicializa los clientes de la API de Google.
+   */
   constructor() {
     this.ttsClient = new textToSpeech.TextToSpeechClient();
     this.sttClient = new speech.SpeechClient();
   }
 
   /**
-   * Genera audio a partir de texto.
-   * @param text Texto a sintetizar.
-   * @param voiceName Nombre de la voz de Google Cloud (ej. "es-ES-Neural2-B").
-   * @returns Buffer con el contenido de audio en formato MP3.
+   * Genera audio sintetizado a partir de texto utilizando Google Cloud TTS.
+   *
+   * @param text - Texto a sintetizar.
+   * @param voiceName - Nombre de la voz de Google Cloud (ej. "es-ES-Neural2-B").
+   * @returns Promesa que se resuelve con un Buffer conteniendo el audio en formato MP3.
+   * @throws Error si falla la peticion o la respuesta viene sin contenido.
    */
   async synthesize(text: string, voiceName: string = 'es-ES-Neural2-B'): Promise<Buffer> {
     try {
@@ -61,10 +73,12 @@ export class GoogleCloudVoiceAdapter implements ITextToSpeech, ISpeechToText {
   }
 
   /**
-   * Transcribe un buffer de audio a texto eliminando el I/O en disco.
-   * @param audioBuffer Buffer del audio.
-   * @param encoding Formato del audio (ej. 'WEBM_OPUS', 'MP3').
-   * @returns Cadena de texto transcrita.
+   * Transcribe un buffer de audio a texto plano utilizando la API de reconocimiento de voz Google Cloud STT.
+   *
+   * @param audioBuffer - Buffer binario con los datos del audio.
+   * @param encoding - Formato de codificacion del audio recibido ('WEBM_OPUS', 'MP3' o 'LINEAR16').
+   * @returns Promesa que se resuelve con la transcripcion de texto.
+   * @throws Error si falla la transcripcion.
    */
   async transcribe(audioBuffer: Buffer, encoding: 'WEBM_OPUS' | 'MP3' | 'LINEAR16' = 'WEBM_OPUS'): Promise<string> {
     try {

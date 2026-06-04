@@ -1,3 +1,7 @@
+/**
+ * @file character.presenter.ts
+ * @description Presentador para transformar y firmar URLs de almacenamiento en las entidades de personaje.
+ */
 import { Character } from "../../../infrastructure/database/entities/Character.js";
 import { CharacterGalleryImage } from "../../../infrastructure/database/entities/CharacterGalleryImage.js";
 import { IStorageService } from "../../../shared/types.js";

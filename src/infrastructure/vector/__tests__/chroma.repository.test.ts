@@ -6,6 +6,9 @@ vi.mock("../../../config/env.js", () => ({
     CHROMA_API_KEY: "test-key",
     CHROMA_TENANT: "default_tenant",
     CHROMA_DATABASE: "default_database",
+    CHROMA_OPERATION_MAX_RETRIES: 3,
+    CHROMA_OPERATION_BASE_DELAY_MS: 10,
+    CHROMA_OPERATION_MAX_DELAY_MS: 100,
   },
 }));
 

@@ -1,5 +1,13 @@
+/**
+ * @file groq.service.ts
+ * @description Proveedor de servicio LLM para la API de Groq Cloud (compatible con OpenAI API).
+ * Implementa llamadas HTTP con control de timeout, abort controller, logs detallados de entrada/salida
+ * y soporte para esquemas JSON en prompts del sistema.
+ */
+
 import fetch from "node-fetch";
 import { env } from "../../config/env.js";
+import { logger } from "../logging/logger.js";
 import {
   buildFinalPrompt,
   buildStructuredOutputSystemPrompt,
@@ -15,6 +23,9 @@ import {
   LlmProviderError,
 } from "./llm-provider.interface.js";
 
+/**
+ * Payload de respuesta tipico compatible con la API de OpenAI devuelto por Groq.
+ */
 interface OpenAiCompatibleResponse {
   error?: {
     message?: string;
@@ -26,13 +37,28 @@ interface OpenAiCompatibleResponse {
   }>;
 }
 
+/**
+ * Adaptador del proveedor Groq que implementa la interfaz LlmProvider.
+ */
 export class GroqService implements LlmProvider {
+  /** Nombre identificador del proveedor. */
   public readonly providerName = "groq";
+  /** Nombre identificador del modelo Groq activo. */
   public readonly modelName: string;
+  /** Clave de API secreta para autenticacion en Groq. */
   private readonly apiKey: string;
+  /** Tiempo maximo de espera (timeout) configurado para la llamada HTTP. */
   private readonly timeoutMs: number;
+  /** Endpoint principal de la API de completions de Groq. */
   private readonly endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
+  /**
+   * Crea una instancia de GroqService.
+   *
+   * @param apiKey - Clave de API de Groq (se lee del entorno por defecto).
+   * @param modelName - Nombre del modelo a interrogar (se lee del entorno por defecto).
+   * @param timeoutMs - Limite de tiempo en milisegundos para abortar la llamada.
+   */
   constructor(
     apiKey: string = env.GROQ_API_KEY ?? "",
     modelName: string = env.GROQ_CHAT_MODEL,
@@ -43,6 +69,17 @@ export class GroqService implements LlmProvider {
     this.timeoutMs = timeoutMs;
   }
 
+  /**
+   * Envia una peticion HTTP POST al endpoint de Groq para generar la respuesta de chat.
+   *
+   * @param systemPrompt - Instrucciones de comportamiento del sistema.
+   * @param history - Historial de la conversacion.
+   * @param userQuery - Mensaje enviado por el usuario.
+   * @param contextRag - Contexto documental del RAG (opcional).
+   * @param responseSchema - Esquema de validacion de salida (opcional).
+   * @returns La respuesta estructurada del modelo Groq.
+   * @throws LlmProviderError si Groq devuelve error, vacio o agota el tiempo de espera.
+   */
   async generateResponse(
     systemPrompt: string,
     history: LlmHistoryMessage[],
@@ -60,6 +97,25 @@ export class GroqService implements LlmProvider {
     const timeoutId = setTimeout(() => abortController.abort(), this.timeoutMs);
 
     try {
+      const iterationId = `groq-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const systemPromptSent = buildStructuredOutputSystemPrompt(systemPrompt, responseSchema);
+      const historySent = history
+        .filter((message) => message.role === "user" || message.role === "assistant")
+        .map((message) => ({ role: message.role, content: message.content }));
+      const finalPrompt = buildFinalPrompt(userQuery, contextRag);
+
+      logger.debug("[groq.iteration.input]", {
+        iterationId,
+        model: this.modelName,
+        systemPrompt,
+        systemPromptSent,
+        historyOriginalCount: history.length,
+        historySentCount: historySent.length,
+        historyDroppedCount: Math.max(0, history.length - historySent.length),
+        historySent,
+        finalPrompt,
+      });
+
       const response = await fetch(this.endpoint, {
         method: "POST",
         headers: {
@@ -69,11 +125,9 @@ export class GroqService implements LlmProvider {
         body: JSON.stringify({
           model: this.modelName,
           messages: [
-            { role: "system", content: buildStructuredOutputSystemPrompt(systemPrompt, responseSchema) },
-            ...history
-              .filter((message) => message.role === "user" || message.role === "assistant")
-              .map((message) => ({ role: message.role, content: message.content })),
-            { role: "user", content: buildFinalPrompt(userQuery, contextRag) },
+            { role: "system", content: systemPromptSent },
+            ...historySent,
+            { role: "user", content: finalPrompt },
           ],
           temperature: 0.7,
         }),
