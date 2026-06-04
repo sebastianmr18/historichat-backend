@@ -1,3 +1,7 @@
+/**
+ * @file ContentVariantCopy.ts
+ * @description Entidad de base de datos para copys (textos) de variantes de contenido.
+ */
 import { Entity, Column, PrimaryGeneratedColumn, Index } from "typeorm";
 
 @Entity({ name: "app_content_variant_copy", schema: "public" })

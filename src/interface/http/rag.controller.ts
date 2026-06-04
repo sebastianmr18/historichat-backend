@@ -1,3 +1,7 @@
+/**
+ * @file rag.controller.ts
+ * @description Controlador HTTP para consultas RAG (Recuperacion Aumentada por Generacion) sobre la base de conocimiento.
+ */
 import { Request, Response } from "express";
 import { AppDataSource } from "../../config/database.js";
 import { RagService } from "../../application/services/rag.service.js";

@@ -1,3 +1,7 @@
+/**
+ * @file CharacterCopyOverride.ts
+ * @description Entidad de base de datos para la sobreescritura de copys (textos) de un personaje.
+ */
 import { Entity, Column, ManyToOne, JoinColumn, PrimaryGeneratedColumn, Index, Relation } from "typeorm";
 import { Character } from "./Character.js";
 

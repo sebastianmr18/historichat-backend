@@ -36,6 +36,7 @@ describe("interview mode prompts", () => {
 
     expect(prompt).toContain("Estas en modo entrevista.");
     expect(prompt).toContain("Tu rol es ser la persona entrevistada");
+    expect(prompt).toContain("Responde siempre en español");
   });
 
   it("builds interview-oriented suggestions via mode strategy", () => {
@@ -70,8 +71,13 @@ describe("interview mode prompts", () => {
     });
 
     expect(callPrompt).toContain("modo llamada en tiempo real");
+    expect(callPrompt).toContain("Responde siempre en español");
     expect(debatePrompt).toContain("modo debate");
     expect(debatePrompt).toContain("frente a Turing");
+    expect(debatePrompt).toContain("historial previo del debate se entrega con etiquetas de hablante");
+    expect(debatePrompt).toContain("Turing");
+    expect(debatePrompt).toContain("text: string en español");
+    expect(debatePrompt).toContain("reason: string breve en español");
   });
 
   it("supports dedicated call and debate suggestion strategies", () => {

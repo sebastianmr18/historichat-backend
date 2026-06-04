@@ -1,3 +1,7 @@
+/**
+ * @file profile.schema.ts
+ * @description Esquema de respuesta Zod para el perfil de usuario.
+ */
 import { z } from "zod";
 
 export const profileSchema = z.object({

@@ -1,3 +1,7 @@
+/**
+ * @file CharacterTimelineRelationship.ts
+ * @description Entidad intermedia para la relacion de muchos a muchos entre timeline y relationships.
+ */
 import { Entity, ManyToOne, JoinColumn, PrimaryColumn, Index, Relation } from "typeorm";
 import { CharacterRelationship } from "./CharacterRelationship.js";
 import { CharacterTimelineEntry } from "./CharacterTimelineEntry.js";

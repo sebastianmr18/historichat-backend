@@ -1,3 +1,7 @@
+/**
+ * @file ws-auth.middleware.ts
+ * @description Middleware de Socket.io para validar el token JWT y autenticar las conexiones.
+ */
 import { JwtPayload } from "jsonwebtoken";
 import { Socket } from "socket.io";
 import { SupabaseTokenVerifier } from "../../infrastructure/auth/SupabaseTokenVerifier.js";

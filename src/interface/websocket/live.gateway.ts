@@ -1,3 +1,7 @@
+/**
+ * @file live.gateway.ts
+ * @description Gateway de Socket.io para coordinar sesiones de llamada de voz en tiempo real.
+ */
 import { Server, Namespace, Socket } from 'socket.io';
 import { LiveCallService } from '../../application/services/live-call.service.js';
 import { logger } from '../../infrastructure/logging/logger.js';

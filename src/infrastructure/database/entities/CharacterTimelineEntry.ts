@@ -1,3 +1,7 @@
+/**
+ * @file CharacterTimelineEntry.ts
+ * @description Entidad de base de datos para entradas en la linea de tiempo biografica de un personaje.
+ */
 import { Entity, Column, ManyToOne, JoinColumn, PrimaryGeneratedColumn, Index, OneToMany, Relation } from "typeorm";
 import { Character } from "./Character.js";
 import { CharacterTimelineRelationship } from "./CharacterTimelineRelationship.js";

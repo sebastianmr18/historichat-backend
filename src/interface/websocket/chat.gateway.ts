@@ -1,3 +1,37 @@
+/**
+ * @file chat.gateway.ts
+ * @description Gateway de WebSocket para el chat en tiempo real con personajes.
+ *
+ * Gestiona las conexiones del namespace raiz de Socket.IO y coordina el flujo de
+ * mensajes de texto y audio tanto en modo entrevista (un usuario con un personaje)
+ * como en modo debate (un usuario moderando a dos personajes). Delega el procesamiento
+ * de lenguaje natural y generacion de respuestas en el ChatService.
+ *
+ * Eventos que escucha:
+ * - join_chat: Une al socket a la sala de una conversacion.
+ * - join_debate: Une al socket a la sala de debate y confirma el inicio.
+ * - send_text: Procesa un mensaje de texto del usuario en modo entrevista.
+ * - send_audio: Procesa un mensaje de audio del usuario en modo entrevista.
+ * - send_debate_text: Procesa un turno de debate iniciado por texto del usuario.
+ * - send_debate_audio: Procesa un turno de debate iniciado por audio del usuario.
+ * - skip_debate_turn: Registra una instruccion de salto de turno manual en el debate.
+ * - disconnect: Registra la desconexion del cliente.
+ *
+ * Eventos que emite:
+ * - ai_message: Respuesta de texto o audio del personaje (entrevista).
+ * - transcription: Transcripcion del audio del usuario.
+ * - suggestions: Sugerencias de preguntas para el usuario.
+ * - debate_started: Confirmacion de inicio de sala de debate.
+ * - debate_user_ack: Confirmacion de recepcion del mensaje del usuario en debate.
+ * - debate_typing: Indicador de que un personaje esta generando su turno.
+ * - debate_turn: Respuesta completa de un personaje en el debate.
+ * - debate_turn_skipped: Notificacion de turno saltado en el debate.
+ * - debate_round_complete: Fin de ronda con estadisticas del debate.
+ * - debate_error: Error durante el procesamiento de un turno de debate.
+ * - error: Error general durante el procesamiento de un mensaje.
+ * - no_speech: Notificacion de audio sin voz detectada.
+ */
+
 import { Server, Socket } from "socket.io";
 import { ChatService } from "../../application/services/chat.service.js";
 import { logger } from "../../infrastructure/logging/logger.js";

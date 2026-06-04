@@ -424,7 +424,7 @@ describe("ChatService", () => {
       ).rejects.toMatchObject({ code: "DEBATE_NOT_AVAILABLE" });
     });
 
-    it("calls generateAiResponse for speaker B with speaker A's response in history", async () => {
+    it("calls generateAiResponse for speaker B with speaker-labeled history", async () => {
       mockGemini.generateResponse
         .mockResolvedValueOnce({ text: "A says hello", provider: "gemini", model: "gemini-test" })
         .mockResolvedValueOnce({ text: "B replies", provider: "gemini", model: "gemini-test" });
@@ -437,7 +437,51 @@ describe("ChatService", () => {
       // history is the 2nd argument
       expect(speakerBMainCall[1]).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ role: "assistant", content: "A says hello" }),
+          expect.objectContaining({ role: "assistant", content: "Character A: A says hello" }),
+        ])
+      );
+    });
+
+    it("labels persisted debate history by speaker and preserves user turns", async () => {
+      mockMessageFind.mockResolvedValueOnce([
+        {
+          id: 12,
+          role: "assistant",
+          content: "respuesta previa de B",
+          conversationId: "conv-debate",
+          speakerCharacterId: "char-b",
+        },
+        {
+          id: 11,
+          role: "assistant",
+          content: "respuesta previa de A",
+          conversationId: "conv-debate",
+          speakerCharacterId: "char-a",
+        },
+        {
+          id: 10,
+          role: "user",
+          content: "pregunta previa",
+          conversationId: "conv-debate",
+        },
+      ]);
+
+      mockGemini.generateResponse
+        .mockResolvedValueOnce({ text: "A responde", provider: "gemini", model: "gemini-test" })
+        .mockResolvedValueOnce({ text: "B responde", provider: "gemini", model: "gemini-test" });
+
+      await service.processDebateMessage("conv-debate", "user-1", "Pregunta actual");
+
+      const firstTurnHistory = mockGemini.generateResponse.mock.calls[0]?.[1] as Array<{
+        role: string;
+        content: string;
+      }>;
+
+      expect(firstTurnHistory).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ role: "user", content: "Usuario: pregunta previa" }),
+          expect.objectContaining({ role: "assistant", content: "Character A: respuesta previa de A" }),
+          expect.objectContaining({ role: "assistant", content: "Character B: respuesta previa de B" }),
         ])
       );
     });
