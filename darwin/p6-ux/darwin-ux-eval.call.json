@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-05-24T06:20:58.401Z",
+  "mode": "call",
+  "participants": 5,
+  "summary": {
+    "samples_latency": 0,
+    "avg_latency_ms": 0,
+    "p95_latency_ms": 0,
+    "average_satisfaction": 0,
+    "wer": 0,
+    "thresholds": {
+      "avg_latency_ms_max": 5000,
+      "p95_latency_ms_max": 8000,
+      "satisfaction_min": 4,
+      "wer_max": 0.15
+    }
+  }
+}

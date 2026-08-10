@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-05-24T03:58:07.780Z",
+  "status": "blocked",
+  "reason": "Unable to connect to Chroma collection",
+  "collectionName": "darwin_kb",
+  "chromaHost": "api.trychroma.com",
+  "failOnChromaError": false,
+  "error": "Failed to connect to chromadb. Make sure your server is running and try again. If you are running from a browser, make sure that your chromadb instance is configured to allow requests from the current origin using the CHROMA_SERVER_CORS_ALLOW_ORIGINS environment variable.",
+  "nextSteps": [
+    "Verify CHROMA_HOST, CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE in local env.",
+    "Ensure Chroma is reachable from this machine.",
+    "Run npm run seed:rag before rerunning retrieval evaluation."
+  ]
+}

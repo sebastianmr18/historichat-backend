@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-05-24T04:56:02.791Z",
+  "status": "blocked",
+  "reason": "Faltan archivos de entrada",
+  "required": [
+    "testing/inputs/p1-retrieval/darwin-eval-25.json",
+    "testing/inputs/p2-generation/darwin-generated-responses.json",
+    "testing/inputs/p3-role-consistency/darwin-role-extra-responses.json"
+  ]
+}

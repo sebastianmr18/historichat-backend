@@ -36,15 +36,21 @@ export class GoogleCloudVoiceAdapter implements ITextToSpeech, ISpeechToText {
    */
   async synthesize(text: string, voiceName: string = 'es-ES-Neural2-B'): Promise<Buffer> {
     try {
+      let langCode = 'es-ES';
+      const parts = voiceName.split('-');
+      if (parts.length >= 2) {
+        langCode = `${parts[0]}-${parts[1].toUpperCase()}`;
+      }
+
       logger.debug('[gcp.voice.synthesize] started', {
         voiceName,
         textLength: text.length,
-        languageCode: 'es-ES',
+        languageCode: langCode,
       });
 
       const [response] = await this.ttsClient.synthesizeSpeech({
         input: { text },
-        voice: { languageCode: 'es-ES', name: voiceName },
+        voice: { languageCode: langCode, name: voiceName },
         audioConfig: { audioEncoding: 'MP3' },
       });
 

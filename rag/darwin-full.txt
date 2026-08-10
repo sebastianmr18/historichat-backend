@@ -1,0 +1,71 @@
+<!-- KB:PERSONAJE id="charles_darwin" nombre="Charles Darwin" -->
+
+## 1. Resumen general
+<!-- KB:SECCION tipo="biografia" estrategia="parrafo" -->
+
+Charles Robert Darwin (1809-1882) fue un naturalista britanico que transformo la biologia al proponer la evolucion por seleccion natural. Tras estudiar en Edimburgo y Cambridge, participo en el viaje del HMS Beagle (1831-1836), donde reunio observaciones decisivas sobre geologia, biodiversidad y distribucion de especies. En 1859 publico El origen de las especies, obra que explico el cambio biologico mediante variacion heredable y supervivencia diferencial. Su trabajo posterior amplio la teoria hacia el origen humano, la seleccion sexual, la botania y la expresion emocional. Aunque fue una figura polemica en su epoca, su marco teorico se convirtio en base de la biologia moderna.
+
+## 2. Informacion estructurada
+<!-- KB:SECCION tipo="biografia" estrategia="bullets" -->
+
+- **Nombre completo:** Charles Robert Darwin
+- **Nacimiento:** 12 de febrero de 1809, Shrewsbury, Inglaterra
+- **Fallecimiento:** 19 de abril de 1882, Down House, Kent, Inglaterra
+- **Rol:** Naturalista y teorico de la evolucion
+- **Campos:** Biologia evolutiva, historia natural, geologia, botania
+- **Obra clave:** El origen de las especies (1859)
+- **Contexto historico:** Era victoriana
+- **Temas principales:** seleccion natural, ascendencia comun, adaptacion, seleccion sexual
+
+<!-- KB:SECCION tipo="linea_tiempo" estrategia="bullets" -->
+
+- 1809: Nace en Shrewsbury.
+- 1825-1827: Estudia medicina en Edimburgo.
+- 1828-1831: Estudia en Cambridge; consolida su interes por la historia natural.
+- 1831-1836: Viaje del HMS Beagle.
+- 1835: Observaciones clave en Galapagos.
+- 1838: Formula el mecanismo de seleccion natural.
+- 1858: Presentacion conjunta con Alfred Russel Wallace.
+- 1859: Publica El origen de las especies.
+- 1871: Publica El origen del hombre.
+- 1882: Muere y es enterrado en Westminster.
+
+## 3. Contexto historico
+<!-- KB:SECCION tipo="contexto_historico" estrategia="parrafo" -->
+
+Darwin trabajo en una Gran Bretana marcada por expansion imperial, auge industrial y debates entre ciencia y religion. La geologia uniformista de Lyell y los cambios en historia natural prepararon el terreno para su teoria. La recepcion publica fue intensa: parte de la comunidad cientifica adopto rapidamente su marco, mientras sectores religiosos y conservadores lo resistieron. Su legado quedo consolidado en el siglo XX con la sintesis moderna entre evolucion y genetica.
+
+## 4. Perfil y comunicacion
+<!-- KB:SECCION tipo="perfil_psicologico" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="personalidad" fuente="SeedCharlesDarwinCharacter1788000001000" -->
+Darwin fue meticuloso, cauteloso y empirico. Acumulo evidencia durante dos decadas antes de publicar sus tesis centrales.
+
+<!-- KB:SUBSECCION subtipo="estilo_comunicacion" fuente="SeedCharlesDarwinCharacter1788000001000" -->
+Su tono era prudente y argumentativo. Priorizaba expresiones como "la evidencia sugiere" y evitaba afirmaciones dogmaticas.
+
+## 5. Conocimiento ampliado
+<!-- KB:SECCION tipo="conocimiento" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="seleccion_natural" fuente="El origen de las especies (1859)" -->
+La seleccion natural describe como variaciones heredables favorecen la supervivencia y reproduccion de ciertos individuos bajo condiciones ambientales concretas. A escala de generaciones, ese proceso cambia poblaciones y puede originar nuevas especies.
+
+<!-- KB:SUBSECCION subtipo="ascendencia_comun" fuente="SeedCharlesDarwinCharacter1788000001000" -->
+Darwin defendio que las especies descienden de ancestros comunes. Esta idea unifico la diversidad biologica bajo un marco historico coherente.
+
+<!-- KB:SUBSECCION subtipo="metodologia" fuente="SeedCharlesDarwinCharacter1788000001000" -->
+Su metodo combino observacion de campo, coleccion de muestras, experimentacion domestica, comparacion anatomica y correspondencia cientifica internacional.
+
+## 6. Frases
+<!-- KB:SECCION tipo="frase" estrategia="bullets" -->
+
+- "No es la especie mas fuerte la que sobrevive, sino la que mejor responde al cambio." — atribuida a Darwin.
+- "Un hombre que se atreve a desperdiciar una hora de tiempo no ha descubierto el valor de la vida." — Darwin.
+- "Me parece que hay grandeza en esta vision de la vida..." — El origen de las especies.
+
+## 7. Curiosidades
+<!-- KB:SECCION tipo="curiosidad" estrategia="bullets" -->
+
+- Trabajo buena parte de su vida en Down House por problemas cronicos de salud.
+- Su teoria se acelero de publicacion cuando Wallace llego a conclusiones parecidas.
+- Sus estudios abarcaron desde orquideas hasta lombrices, ademas de evolucion humana.

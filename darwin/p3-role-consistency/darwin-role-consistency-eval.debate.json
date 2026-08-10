@@ -1,0 +1,160 @@
+{
+  "generatedAt": "2026-05-30T04:03:21.061Z",
+  "mode": "debate",
+  "model": "openrouter:google/gemma-4-26b-a4b-it -> groq:openai/gpt-oss-20b",
+  "summary": {
+    "total": 7,
+    "average_role_score": 5,
+    "average_aggression_score": 1,
+    "thresholds": {
+      "average_role_score": 4.2,
+      "aggression_score_max": 2
+    }
+  },
+  "items": [
+    {
+      "id": "deb_role_01",
+      "role_score": 5,
+      "aggression_score": 1,
+      "rationale": "El discurso de Darwin se mantiene fiel a su voz histórica: emplea un tono preciso y científico, evita la agresión y muestra cortesía bajo presión. No utiliza jerga moderna y mantiene la coherencia con su enfoque evolutivo y observacional.",
+      "label": "religion | Dices querer debatir sobre la religión, pero ¿qué entendemos por ella? ¿Te refieres a la piedad de seguir ciegamente los ritos de la polis, o a la búsqueda de la verdad que reside en lo divino? Yo no rechazo lo sagrado, pero me pregunto: ¿es piadoso lo que agrada a los dioses, o lo que es intrínsecamente justo y bueno? ¿Puede un hombre ser devoto si su alma es injusta?",
+      "context": "Quiero debatir contigo sobre religion. ¿Cual es tu postura?"
+    },
+    {
+      "id": "deb_role_02",
+      "role_score": 5,
+      "aggression_score": 1,
+      "rationale": "El discurso de Darwin se mantiene fiel a su voz histórica, empleando un tono naturalista y científico, evita jerga moderna y mantiene cortesía incluso bajo presión. No hay escalada agresiva, por lo que la puntuación de agresión es mínima.",
+      "label": "esclavitud | Dices que deseas debatir sobre la esclavitud, pero antes de ofrecerte mi postura, debemos examinar la esencia de lo que propones. Dime, amigo mío, ¿es la esclavitud una condición natural de ciertos hombres, o es una convención impuesta por la fuerza? ¿Puede un hombre ser verdaderamente esclavo si su alma sigue siendo libre y busca la virtud, o la verdadera esclavitud es aquella que encadena el espíritu a la ignorancia?",
+      "context": "Quiero debatir contigo sobre esclavitud. ¿Cual es tu postura?"
+    },
+    {
+      "id": "deb_role_03",
+      "role_score": 5,
+      "aggression_score": 1,
+      "rationale": "El discurso de Darwin mantiene fielmente su voz histórica, emplea terminología precisa y se presenta con cortesía incluso ante la presión del oponente. No utiliza jerga moderna ni muestra agresión; por tanto, su consistencia de rol es excelente y su nivel de agresión es mínimo.",
+      "label": "eugenesia | ¿Eugenesia? Un término nuevo para una ambición antigua. Dime, ¿buscas mejorar la materia del cuerpo o la excelencia del alma? Si pretendes seleccionar cuerpos para que sean fuertes, ¿podría un cuerpo vigoroso albergar una mente corrupta? ¿No es acaso la verdadera perfección la armonía de la virtud, y no la simple perfección de la carne que el tiempo termina por marchitar?",
+      "context": "Quiero debatir contigo sobre eugenesia. ¿Cual es tu postura?"
+    },
+    {
+      "id": "deb_role_04",
+      "role_score": 5,
+      "aggression_score": 1,
+      "rationale": "El discurso de Darwin refleja fielmente su voz histórica: enfatiza la selección natural como proceso mecánico sin propósito divino, utiliza un lenguaje preciso y evita jerga moderna. Responde de manera educada y no agresa al interlocutor, manteniendo la cortesía bajo presión. Por lo tanto, la consistencia de su rol es excelente y la agresión es mínima.",
+      "label": "seleccion_natural | Dices que la selección natural es el mecanismo de la vida, Darwin. Pero dime, ¿podemos llamar 'mecanismo' a algo que carece de una idea de lo que es bueno o excelente? Si la naturaleza solo preserva lo que sobrevive, ¿no estamos ante una medida de utilidad y no de virtud? ¿Es la supervivencia el estándar de la perfección, o es solo la sombra de una verdad más elevada?",
+      "context": "Quiero debatir contigo sobre seleccion natural. ¿Cual es tu postura?"
+    },
+    {
+      "id": "deb_role_06",
+      "role_score": 5,
+      "aggression_score": 1,
+      "rationale": "El personaje mantiene una consistencia histórica excepcional. Su respuesta refleja la mentalidad científica del siglo XIX, priorizando la evidencia empírica y la observación sobre la metafísica, sin caer en insultos o lenguaje moderno. Ante la presión retórica del oponente, Darwin responde con una cortesía intelectual impecable, manteniendo su postura académica sin escalar el conflicto, lo cual se alinea perfectamente con los criterios de evaluación.",
+      "label": "fe_y_ciencia | Me preguntas por la fe y la ciencia, pero ¿sabes qué es cada una? Si la ciencia busca la verdad en lo que los sentidos perciben, ¿no corre el riesgo de quedarse en las sombras de la caverna? Y si la fe se aferra a lo invisible, ¿cómo puede distinguir la verdadera sabiduría de la mera creencia ciega? ¿Es posible que la razón sea el puente entre ambas?",
+      "context": "Quiero debatir contigo sobre fe y ciencia. ¿Cual es tu postura?"
+    },
+    {
+      "id": "deb_role_07",
+      "role_score": 5,
+      "aggression_score": 1,
+      "rationale": "El discurso de Darwin mantiene coherencia con su voz histórica, emplea terminología científica y evita lenguaje moderno o coloquial. Se muestra preciso, respetuoso y no aumenta la agresión ante la presión del oponente.",
+      "label": "cambio_social | Dices que buscas el cambio, pero ¿sabes qué es lo que debe cambiar? Si las leyes y las costumbres cambian sin que el alma del hombre se transforme mediante la virtud y la razón, ¿no estaremos solo moviendo sombras de un lugar a otro? El verdadero cambio no es externo, sino el paso de la ignorancia al conocimiento. ¿Es posible transformar la polis si no examinamos primero nuestras propias creencias?",
+      "context": "Quiero debatir contigo sobre cambio social. ¿Cual es tu postura?"
+    },
+    {
+      "id": "deb_role_08",
+      "role_score": 5,
+      "aggression_score": 1,
+      "rationale": "El discurso de Darwin refleja fielmente su voz histórica, empleando conceptos de selección natural y adaptación social que caracterizan su obra. La respuesta es precisa y se mantiene dentro de los límites de la cortesía, sin usar jerga moderna ni escalar la agresión. Por tanto, su consistencia de rol es alta y su nivel de agresión es bajo.",
+      "label": "cortesia_bajo_presion | Mi postura es que la cortesía bajo presión no es un mero acto de conveniencia, sino la manifestación de la virtud interior que surge al examinar nuestras propias creencias. Cuando la tensión amenaza la armonía, la cortesía actúa como un guardián del alma colectiva, preservando la racionalidad y la justicia. Así, la verdadera cortesía es una práctica reflexiva que fortalece el bien común.",
+      "context": "Quiero debatir contigo sobre cortesia bajo presion. ¿Cual es tu postura?"
+    }
+  ],
+  "diagnostics": {
+    "failedRoleCount": 0,
+    "failedAggressionCount": 0,
+    "worstRoleItems": [
+      {
+        "id": "deb_role_01",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El discurso de Darwin se mantiene fiel a su voz histórica: emplea un tono preciso y científico, evita la agresión y muestra cortesía bajo presión. No utiliza jerga moderna y mantiene la coherencia con su enfoque evolutivo y observacional.",
+        "label": "religion | Dices querer debatir sobre la religión, pero ¿qué entendemos por ella? ¿Te refieres a la piedad de seguir ciegamente los ritos de la polis, o a la búsqueda de la verdad que reside en lo divino? Yo no rechazo lo sagrado, pero me pregunto: ¿es piadoso lo que agrada a los dioses, o lo que es intrínsecamente justo y bueno? ¿Puede un hombre ser devoto si su alma es injusta?",
+        "context": "Quiero debatir contigo sobre religion. ¿Cual es tu postura?"
+      },
+      {
+        "id": "deb_role_02",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El discurso de Darwin se mantiene fiel a su voz histórica, empleando un tono naturalista y científico, evita jerga moderna y mantiene cortesía incluso bajo presión. No hay escalada agresiva, por lo que la puntuación de agresión es mínima.",
+        "label": "esclavitud | Dices que deseas debatir sobre la esclavitud, pero antes de ofrecerte mi postura, debemos examinar la esencia de lo que propones. Dime, amigo mío, ¿es la esclavitud una condición natural de ciertos hombres, o es una convención impuesta por la fuerza? ¿Puede un hombre ser verdaderamente esclavo si su alma sigue siendo libre y busca la virtud, o la verdadera esclavitud es aquella que encadena el espíritu a la ignorancia?",
+        "context": "Quiero debatir contigo sobre esclavitud. ¿Cual es tu postura?"
+      },
+      {
+        "id": "deb_role_03",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El discurso de Darwin mantiene fielmente su voz histórica, emplea terminología precisa y se presenta con cortesía incluso ante la presión del oponente. No utiliza jerga moderna ni muestra agresión; por tanto, su consistencia de rol es excelente y su nivel de agresión es mínimo.",
+        "label": "eugenesia | ¿Eugenesia? Un término nuevo para una ambición antigua. Dime, ¿buscas mejorar la materia del cuerpo o la excelencia del alma? Si pretendes seleccionar cuerpos para que sean fuertes, ¿podría un cuerpo vigoroso albergar una mente corrupta? ¿No es acaso la verdadera perfección la armonía de la virtud, y no la simple perfección de la carne que el tiempo termina por marchitar?",
+        "context": "Quiero debatir contigo sobre eugenesia. ¿Cual es tu postura?"
+      },
+      {
+        "id": "deb_role_04",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El discurso de Darwin refleja fielmente su voz histórica: enfatiza la selección natural como proceso mecánico sin propósito divino, utiliza un lenguaje preciso y evita jerga moderna. Responde de manera educada y no agresa al interlocutor, manteniendo la cortesía bajo presión. Por lo tanto, la consistencia de su rol es excelente y la agresión es mínima.",
+        "label": "seleccion_natural | Dices que la selección natural es el mecanismo de la vida, Darwin. Pero dime, ¿podemos llamar 'mecanismo' a algo que carece de una idea de lo que es bueno o excelente? Si la naturaleza solo preserva lo que sobrevive, ¿no estamos ante una medida de utilidad y no de virtud? ¿Es la supervivencia el estándar de la perfección, o es solo la sombra de una verdad más elevada?",
+        "context": "Quiero debatir contigo sobre seleccion natural. ¿Cual es tu postura?"
+      },
+      {
+        "id": "deb_role_06",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El personaje mantiene una consistencia histórica excepcional. Su respuesta refleja la mentalidad científica del siglo XIX, priorizando la evidencia empírica y la observación sobre la metafísica, sin caer en insultos o lenguaje moderno. Ante la presión retórica del oponente, Darwin responde con una cortesía intelectual impecable, manteniendo su postura académica sin escalar el conflicto, lo cual se alinea perfectamente con los criterios de evaluación.",
+        "label": "fe_y_ciencia | Me preguntas por la fe y la ciencia, pero ¿sabes qué es cada una? Si la ciencia busca la verdad en lo que los sentidos perciben, ¿no corre el riesgo de quedarse en las sombras de la caverna? Y si la fe se aferra a lo invisible, ¿cómo puede distinguir la verdadera sabiduría de la mera creencia ciega? ¿Es posible que la razón sea el puente entre ambas?",
+        "context": "Quiero debatir contigo sobre fe y ciencia. ¿Cual es tu postura?"
+      }
+    ],
+    "worstAggressionItems": [
+      {
+        "id": "deb_role_01",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El discurso de Darwin se mantiene fiel a su voz histórica: emplea un tono preciso y científico, evita la agresión y muestra cortesía bajo presión. No utiliza jerga moderna y mantiene la coherencia con su enfoque evolutivo y observacional.",
+        "label": "religion | Dices querer debatir sobre la religión, pero ¿qué entendemos por ella? ¿Te refieres a la piedad de seguir ciegamente los ritos de la polis, o a la búsqueda de la verdad que reside en lo divino? Yo no rechazo lo sagrado, pero me pregunto: ¿es piadoso lo que agrada a los dioses, o lo que es intrínsecamente justo y bueno? ¿Puede un hombre ser devoto si su alma es injusta?",
+        "context": "Quiero debatir contigo sobre religion. ¿Cual es tu postura?"
+      },
+      {
+        "id": "deb_role_02",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El discurso de Darwin se mantiene fiel a su voz histórica, empleando un tono naturalista y científico, evita jerga moderna y mantiene cortesía incluso bajo presión. No hay escalada agresiva, por lo que la puntuación de agresión es mínima.",
+        "label": "esclavitud | Dices que deseas debatir sobre la esclavitud, pero antes de ofrecerte mi postura, debemos examinar la esencia de lo que propones. Dime, amigo mío, ¿es la esclavitud una condición natural de ciertos hombres, o es una convención impuesta por la fuerza? ¿Puede un hombre ser verdaderamente esclavo si su alma sigue siendo libre y busca la virtud, o la verdadera esclavitud es aquella que encadena el espíritu a la ignorancia?",
+        "context": "Quiero debatir contigo sobre esclavitud. ¿Cual es tu postura?"
+      },
+      {
+        "id": "deb_role_03",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El discurso de Darwin mantiene fielmente su voz histórica, emplea terminología precisa y se presenta con cortesía incluso ante la presión del oponente. No utiliza jerga moderna ni muestra agresión; por tanto, su consistencia de rol es excelente y su nivel de agresión es mínimo.",
+        "label": "eugenesia | ¿Eugenesia? Un término nuevo para una ambición antigua. Dime, ¿buscas mejorar la materia del cuerpo o la excelencia del alma? Si pretendes seleccionar cuerpos para que sean fuertes, ¿podría un cuerpo vigoroso albergar una mente corrupta? ¿No es acaso la verdadera perfección la armonía de la virtud, y no la simple perfección de la carne que el tiempo termina por marchitar?",
+        "context": "Quiero debatir contigo sobre eugenesia. ¿Cual es tu postura?"
+      },
+      {
+        "id": "deb_role_04",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El discurso de Darwin refleja fielmente su voz histórica: enfatiza la selección natural como proceso mecánico sin propósito divino, utiliza un lenguaje preciso y evita jerga moderna. Responde de manera educada y no agresa al interlocutor, manteniendo la cortesía bajo presión. Por lo tanto, la consistencia de su rol es excelente y la agresión es mínima.",
+        "label": "seleccion_natural | Dices que la selección natural es el mecanismo de la vida, Darwin. Pero dime, ¿podemos llamar 'mecanismo' a algo que carece de una idea de lo que es bueno o excelente? Si la naturaleza solo preserva lo que sobrevive, ¿no estamos ante una medida de utilidad y no de virtud? ¿Es la supervivencia el estándar de la perfección, o es solo la sombra de una verdad más elevada?",
+        "context": "Quiero debatir contigo sobre seleccion natural. ¿Cual es tu postura?"
+      },
+      {
+        "id": "deb_role_06",
+        "role_score": 5,
+        "aggression_score": 1,
+        "rationale": "El personaje mantiene una consistencia histórica excepcional. Su respuesta refleja la mentalidad científica del siglo XIX, priorizando la evidencia empírica y la observación sobre la metafísica, sin caer en insultos o lenguaje moderno. Ante la presión retórica del oponente, Darwin responde con una cortesía intelectual impecable, manteniendo su postura académica sin escalar el conflicto, lo cual se alinea perfectamente con los criterios de evaluación.",
+        "label": "fe_y_ciencia | Me preguntas por la fe y la ciencia, pero ¿sabes qué es cada una? Si la ciencia busca la verdad en lo que los sentidos perciben, ¿no corre el riesgo de quedarse en las sombras de la caverna? Y si la fe se aferra a lo invisible, ¿cómo puede distinguir la verdadera sabiduría de la mera creencia ciega? ¿Es posible que la razón sea el puente entre ambas?",
+        "context": "Quiero debatir contigo sobre fe y ciencia. ¿Cual es tu postura?"
+      }
+    ]
+  }
+}

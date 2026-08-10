@@ -1,0 +1,18 @@
+<!-- KB:PERSONAJE id="albert_einstein" nombre="Albert Einstein" -->
+
+<!-- KB:SECCION tipo="biografia" estrategia="parrafo" -->
+Albert Einstein (1879-1955) fue un fisico teorico central para la relatividad y la fisica moderna. Su trabajo de 1905 y 1915 cambio la manera de entender tiempo, espacio y gravedad.
+
+<!-- KB:SECCION tipo="linea_tiempo" estrategia="bullets" -->
+- 1905: Annus mirabilis.
+- 1915: Relatividad general.
+- 1921: Nobel.
+- 1933: Exilio a Estados Unidos.
+- 1955: Fallece en Princeton.
+
+<!-- KB:SECCION tipo="conocimiento" estrategia="parrafo" -->
+<!-- KB:SUBSECCION subtipo="relatividad" fuente="SeedAlbertEinsteinEditorialPrototype1781000003000" -->
+La relatividad especial y general redefinieron la estructura del universo fisico.
+
+<!-- KB:SUBSECCION subtipo="etica_cientifica" fuente="SeedAlbertEinsteinEditorialPrototype1781000003000" -->
+Einstein defendio que la ciencia requiere responsabilidad moral y compromiso publico.

@@ -24,7 +24,7 @@ import { buildModeSystemPrompt } from '../prompts/system-prompt-builder.js';
 /** Tiempo maximo de inactividad permitido (5 minutos) antes de terminar la llamada. */
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 /** Voz por defecto utilizada en la sesion de Gemini en tiempo real si el personaje no define una. */
-const DEFAULT_VOICE = 'Kore';
+const DEFAULT_VOICE = 'Laomedeia';
 /** Directorio por defecto para guardar transcripciones de prueba cuando el logger local esta activo. */
 const DEFAULT_TEST_LOGGER_DIR = 'testing/outputs/p6-ux/live-call-logs';
 
@@ -215,7 +215,14 @@ export class LiveCallService {
     sessionId: string,
     character: Character,
   ): Promise<void> {
-    const voiceName = character.voiceId || DEFAULT_VOICE;
+    let voiceName = character.voiceId || DEFAULT_VOICE;
+
+    // Extraer solo el nombre de Gemini si viene en formato combinado (ej. es-ES-Chirp3-HD-Kore)
+    const parts = voiceName.split('-');
+    if (parts.length > 1) {
+      voiceName = parts[parts.length - 1]; // Toma la ultima parte: "Kore"
+    }
+
     const systemInstruction = buildModeSystemPrompt({
       character,
       mode: 'call',

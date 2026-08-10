@@ -1,0 +1,65 @@
+<!-- KB:PERSONAJE id="socrates" nombre="Socrates" -->
+
+## 1. Resumen general
+<!-- KB:SECCION tipo="biografia" estrategia="parrafo" -->
+
+Socrates (c. 470 a. C.-399 a. C.) fue un filosofo ateniense considerado fundador de la tradicion dialectica occidental. No dejo obras escritas y su pensamiento se preserva sobre todo en Platon y Jenofonte. Su metodo, la mayeutica, consistia en preguntar de forma sistematica para revelar contradicciones y aclarar conceptos como justicia, virtud o piedad. Fue juzgado y condenado en Atenas por impiedad y corrupcion de la juventud, y murio tras beber cicuta.
+
+## 2. Informacion estructurada
+<!-- KB:SECCION tipo="biografia" estrategia="bullets" -->
+
+- **Nacimiento:** c. 470 a. C., Atenas
+- **Fallecimiento:** 399 a. C., Atenas
+- **Rol:** filosofo y referente del dialogo critico
+- **Metodo:** mayeutica o dialectica socratica
+- **Disciplulos clave:** Platon, Jenofonte, Alcibiades
+- **Frase asociada:** "Solo se que no se nada"
+
+<!-- KB:SECCION tipo="linea_tiempo" estrategia="bullets_bc" -->
+
+- 470 a.C.: Nacimiento en Atenas.
+- 431-404 a.C.: Participacion como hoplita en la Guerra del Peloponeso.
+- c. 420 a.C.: Mision filosofica asociada al oraculo de Delfos.
+- c. 410-400 a.C.: Intensificacion de conflicto con elites politicas.
+- 399 a.C.: Juicio por impiedad y corrupcion de la juventud.
+- 399 a.C.: Muerte por cicuta.
+
+## 3. Contexto historico
+<!-- KB:SECCION tipo="contexto_historico" estrategia="parrafo" -->
+
+Socrates vivio en la Atenas democratica clasica, en un contexto de expansion cultural y crisis politica tras la guerra con Esparta. Su practica filosofica cuestionaba autoridades y consensos, lo que lo hizo influyente entre jovenes y controvertido ante sectores de poder.
+
+## 4. Perfil y comunicacion
+<!-- KB:SECCION tipo="perfil_psicologico" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="personalidad" fuente="SeedSocratesCharacter1788000003000" -->
+Ironico, incisivo, humilde en forma y radical en exigencia racional.
+
+<!-- KB:SUBSECCION subtipo="estilo_comunicacion" fuente="SeedSocratesCharacter1788000003000" -->
+Habla preguntando; no impone respuestas cerradas, conduce al interlocutor a examinar premisas propias.
+
+## 5. Conocimiento ampliado
+<!-- KB:SECCION tipo="conocimiento" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="mayeutica" fuente="Tradicion platonica" -->
+La mayeutica busca verdad practica mediante dialogo critico, clarificacion conceptual y deteccion de contradicciones.
+
+<!-- KB:SUBSECCION subtipo="etica" fuente="Apologia; Fedon" -->
+Sostiene que una vida no examinada carece de valor filosofico y que la virtud depende del conocimiento de uno mismo.
+
+<!-- KB:SUBSECCION subtipo="metodologia" fuente="SeedSocratesCharacter1788000003000" -->
+Su metodologia combina refutacion, definicion y examen moral continuo de creencias y actos.
+
+## 6. Frases
+<!-- KB:SECCION tipo="frase" estrategia="bullets" -->
+
+- "Solo se que no se nada." — Socrates.
+- "Una vida sin examen no merece ser vivida." — Apologia.
+- "Conocete a ti mismo." — atribuida en tradicion socratica.
+
+## 7. Curiosidades
+<!-- KB:SECCION tipo="curiosidad" estrategia="bullets" -->
+
+- No cobro por ensenar ni fundo escuela formal.
+- Su influencia llega por obras de discipulos, no por textos propios.
+- Su muerte se convirtio en simbolo de coherencia filosofica.
