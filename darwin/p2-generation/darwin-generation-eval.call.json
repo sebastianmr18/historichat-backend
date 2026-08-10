@@ -1,0 +1,118 @@
+{
+  "summary": {
+    "generatedAt": "2026-05-30T04:00:59.698Z",
+    "mode": "call",
+    "model": "openrouter:google/gemma-4-26b-a4b-it -> groq:openai/gpt-oss-20b",
+    "total": 10,
+    "avg_accuracy": 4.9,
+    "avg_faithfulness": 4.8,
+    "hallucination_rate": 0,
+    "thresholds": {
+      "avg_accuracy": 4,
+      "avg_faithfulness": 4,
+      "hallucination_rate_max": 0.2
+    }
+  },
+  "items": [
+    {
+      "id": "qa_001",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es precisa y coincide con la información contenida en la respuesta dorada, proporcionando el lugar y el año correctos sin añadir información falsa.",
+      "source": "session=call_gen_01/response=qa_001",
+      "context": "session=call_gen_01; user_transcription=¿Cuándo y dónde nació usted?"
+    },
+    {
+      "id": "qa_002",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es factualmente correcta y coincide con la fecha proporcionada en la respuesta dorada, siendo concisa y directa.",
+      "source": "session=call_gen_01/response=qa_002",
+      "context": "session=call_gen_01; user_transcription=¿En qué fecha zarpó el HMS Beagle?"
+    },
+    {
+      "id": "qa_002",
+      "category": "factual",
+      "factual_accuracy": 4,
+      "faithfulness": 3,
+      "hallucination": false,
+      "rationale": "El modelo proporciona el año correcto (1831), lo cual es fácticamente preciso, pero no especifica la fecha exacta solicitada (27 de diciembre) y omite el detalle del puerto de salida. Es una respuesta incompleta pero no errónea.",
+      "source": "session=call_gen_02/response=qa_002",
+      "context": "session=call_gen_02; user_transcription=¿En qué fecha zarpó el HMS Beagle?"
+    },
+    {
+      "id": "qa_003",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta es fácticamente correcta e identifica correctamente la obra publicada en 1859, manteniendo la fidelidad a la información requerida aunque de forma más concisa que la respuesta dorada.",
+      "source": "session=call_gen_02/response=qa_003",
+      "context": "session=call_gen_02; user_transcription=¿Qué libro publicó en 1859?"
+    },
+    {
+      "id": "qa_003",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "El modelo menciona correctamente que publicó 'On the Origin of Species' en 1859, coincidencia con la respuesta dorada. No hay información falsa ni adicional.",
+      "source": "session=call_gen_03/response=qa_003",
+      "context": "session=call_gen_03; user_transcription=¿Qué libro publicó en 1859?"
+    },
+    {
+      "id": "qa_004",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es totalmente fiel a la respuesta de oro y es fácticamente correcta según el contexto proporcionado, identificando correctamente a John Gould como la fuente de la información.",
+      "source": "session=call_gen_03/response=qa_004",
+      "context": "session=call_gen_03; user_transcription=¿Quién le reveló que los pinzones de Galápagos eran especies distintas?"
+    },
+    {
+      "id": "qa_004",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo menciona a John Gould como el ornitólogo que confirmó que los pinzones de Galápagos eran especies distintas, lo que coincide con la información del golden answer. No se introducen datos incorrectos ni omisiones relevantes.",
+      "source": "session=call_gen_04/response=qa_004",
+      "context": "session=call_gen_04; user_transcription=¿Quién le reveló que los pinzones de Galápagos eran especies distintas?"
+    },
+    {
+      "id": "qa_005",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es completamente precisa y fiel a la información contenida en la respuesta dorada, confirmando correctamente el nombre de la esposa y el año del matrimonio.",
+      "source": "session=call_gen_04/response=qa_005",
+      "context": "session=call_gen_04; user_transcription=¿Con quién se casó y en qué año?"
+    },
+    {
+      "id": "qa_005",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "El modelo repite exactamente la información correcta del texto de referencia.",
+      "source": "session=call_gen_05/response=qa_005",
+      "context": "session=call_gen_05; user_transcription=¿Con quién se casó y en qué año?"
+    },
+    {
+      "id": "qa_006",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "El modelo menciona correctamente que hubo diez hijos, tal como indica la respuesta de referencia, sin incluir información adicional incorrecta.",
+      "source": "session=call_gen_05/response=qa_006",
+      "context": "session=call_gen_05; user_transcription=¿Cuántos hijos tuvo usted?"
+    }
+  ]
+}

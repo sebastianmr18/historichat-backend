@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-05-25T05:06:25.226Z",
+  "mode": "interview",
+  "participants": 5,
+  "summary": {
+    "samples_latency": 0,
+    "avg_latency_ms": 0,
+    "p95_latency_ms": 0,
+    "average_satisfaction": 0,
+    "wer": 0,
+    "thresholds": {
+      "avg_latency_ms_max": 3000,
+      "p95_latency_ms_max": 5000,
+      "satisfaction_min": 4
+    }
+  }
+}

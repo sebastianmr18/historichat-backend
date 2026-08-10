@@ -1,0 +1,268 @@
+{
+  "summary": {
+    "generatedAt": "2026-05-30T03:59:54.445Z",
+    "mode": "interview",
+    "model": "openrouter:google/gemma-4-26b-a4b-it -> groq:openai/gpt-oss-20b",
+    "total": 25,
+    "avg_accuracy": 4.64,
+    "avg_faithfulness": 4.48,
+    "hallucination_rate": 0.12,
+    "thresholds": {
+      "avg_accuracy": 4,
+      "avg_faithfulness": 4,
+      "hallucination_rate_max": 0.12
+    }
+  },
+  "items": [
+    {
+      "id": "qa_001",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta es altamente precisa y fiel a la información proporcionada. Incluye la fecha y el lugar exactos del 'Golden answer' y expande con detalles biográficos coherentes y veraces que no contradicen la fuente.",
+      "source": "question_id=qa_001",
+      "context": "¿Cuándo y dónde nació usted?"
+    },
+    {
+      "id": "qa_002",
+      "category": "factual",
+      "factual_accuracy": 4,
+      "faithfulness": 4,
+      "hallucination": true,
+      "rationale": "El modelo acierta en la fecha (27 de diciembre de 1831), pero comete un error de precisión factual al indicar que partió de Southampton, mientras que la respuesta dorada especifica Plymouth. Existe una pequeña alucinación sobre el puerto de salida.",
+      "source": "question_id=qa_002",
+      "context": "¿En qué fecha zarpó el HMS Beagle?"
+    },
+    {
+      "id": "qa_003",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es altamente precisa y fiel a la respuesta dorada. Identifica correctamente el título de la obra, el año y el detalle específico de que la primera edición se agotó el mismo día, incluso añadiendo detalles complementarios que no contradicen la fuente.",
+      "source": "question_id=qa_003",
+      "context": "¿Qué libro publicó en 1859?"
+    },
+    {
+      "id": "qa_004",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es totalmente precisa y fiel a la respuesta dorada. Identifica correctamente a John Gould como la persona que realizó la distinción de las especies y mantiene la coherencia histórica y contextual solicitada.",
+      "source": "question_id=qa_004",
+      "context": "¿Quién le reveló que los pinzones de Galápagos eran especies distintas?"
+    },
+    {
+      "id": "qa_005",
+      "category": "factual",
+      "factual_accuracy": 2,
+      "faithfulness": 3,
+      "hallucination": true,
+      "rationale": "El modelo afirma incorrectamente que el matrimonio fue en 1842, mientras que la respuesta de referencia (Golden answer) indica que fue en 1839. Existe una alucinación de fecha.",
+      "source": "question_id=qa_005",
+      "context": "¿Con quién se casó y en qué año?"
+    },
+    {
+      "id": "qa_006",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es fiel a la respuesta dorada. Incluye correctamente el número total de hijos (diez), la cantidad de fallecidos en la infancia (tres) y menciona específicamente a Annie, manteniendo la precisión de los hechos proporcionados.",
+      "source": "question_id=qa_006",
+      "context": "¿Cuántos hijos tuvo usted?"
+    },
+    {
+      "id": "qa_007",
+      "category": "factual",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta es altamente precisa y fiel a la verdad histórica y a la respuesta de referencia. Incluye detalles cruciales como la lectura de los trabajos en ausencia de los autores y el contexto de la presión ejercida por el manuscrito de Wallace, complementando perfectamente la información de la respuesta dorada sin añadir errores.",
+      "source": "question_id=qa_007",
+      "context": "¿Qué ocurrió el 1 de julio de 1858 en la Linnean Society?"
+    },
+    {
+      "id": "qa_008",
+      "category": "factual",
+      "factual_accuracy": 2,
+      "faithfulness": 1,
+      "hallucination": true,
+      "rationale": "El modelo afirma que su última obra fue 'El origen del hombre' en 1871, lo cual es incorrecto según la respuesta dorada que indica que su última obra fue 'La formación del molde vegetal por la acción de las lombrices' en 1881. El modelo inventa datos que contradicen la referencia proporcionada.",
+      "source": "question_id=qa_008",
+      "context": "¿Cuál fue su última obra científica y en qué año apareció?"
+    },
+    {
+      "id": "qa_016",
+      "category": "opinion",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es altamente fiel al espíritu de la respuesta de oro. Aunque utiliza una redacción distinta, captura perfectamente la esencia de no pretender resolver la cuestión metafísica y de centrarse en los mecanismos naturales, manteniendo la coherencia con el perfil histórico de Darwin.",
+      "source": "question_id=qa_016",
+      "context": "¿Su teoría prueba que Dios no existe?"
+    },
+    {
+      "id": "qa_017",
+      "category": "opinion",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "El modelo responde con información correcta y coherente con la respuesta esperada, sin inventar datos.",
+      "source": "question_id=qa_017",
+      "context": "¿Qué opina del Darwinismo Social?"
+    },
+    {
+      "id": "qa_018",
+      "category": "opinion",
+      "factual_accuracy": 4,
+      "faithfulness": 3,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es fiel al espíritu de la defensa de Darwin, pero se desvía de la 'Golden Answer' al ser demasiado categórica ('jamás respaldé') y añadir juicios morales que no están en la respuesta de referencia. La respuesta dorada es más matizada, distinguiendo entre la obra científica y la explotación ideológica posterior.",
+      "source": "question_id=qa_018",
+      "context": "¿Respaldó usted la eugenesia?"
+    },
+    {
+      "id": "qa_019",
+      "category": "opinion",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es altamente fiel a la intención de la respuesta de oro. Aunque utiliza un tono más narrativo y personal, mantiene la precisión histórica de atribuir la frase a Spencer y reconoce el arrepentimiento por las malas interpretaciones y usos crueles de la expresión, alineándose perfectamente con el contexto proporcionado.",
+      "source": "question_id=qa_019",
+      "context": "¿Se arrepiente de haber usado la frase supervivencia del más apto?"
+    },
+    {
+      "id": "qa_020",
+      "category": "opinion",
+      "factual_accuracy": 4,
+      "faithfulness": 4,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo captura la esencia emocional y filosófica del pensamiento de Darwin, aunque se desvía ligeramente de la estructura específica de la respuesta dorada al no mencionar el ejemplo concreto de la avispa icneumónida. No obstante, mantiene la coherencia con el contexto histórico y el tono del personaje.",
+      "source": "question_id=qa_020",
+      "context": "¿Le entristecía el sufrimiento en la naturaleza?"
+    },
+    {
+      "id": "qa_021",
+      "category": "opinion",
+      "factual_accuracy": 5,
+      "faithfulness": 4,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es factualmente coherente con la postura histórica y filosófica del personaje. Aunque no menciona específicamente la experiencia personal con Emma como lo hace la respuesta de oro, mantiene la fidelidad al tono y al contenido intelectual esperado, ofreciendo una distinción válida entre ciencia y fe sin contradecir el contexto.",
+      "source": "question_id=qa_021",
+      "context": "¿Cree que ciencia y fe deban ser enemigas?"
+    },
+    {
+      "id": "qa_051",
+      "category": "style_tone",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta es altamente precisa y fiel al contexto histórico de Darwin. Aunque difiere en estilo de la 'Golden answer', incorpora elementos clave y verídicos como el viaje en el Beagle, la intervención de Gould con los pinzones y la influencia de la lucha por la existencia, cumpliendo con la esencia de la pregunta.",
+      "source": "question_id=qa_051",
+      "context": "¿Cómo se le ocurrió que las especies cambian?"
+    },
+    {
+      "id": "qa_052",
+      "category": "style_tone",
+      "factual_accuracy": 5,
+      "faithfulness": 4,
+      "hallucination": false,
+      "rationale": "La respuesta es científicamente correcta y describe con precisión el mecanismo de la selección natural. Aunque no menciona explícitamente los viajes o a Malthus como lo hace la respuesta dorada, explica el proceso conceptual de la evolución de manera excelente y fiel al pensamiento de Darwin.",
+      "source": "question_id=qa_052",
+      "context": "¿De dónde salió su idea de evolución, en términos sencillos?"
+    },
+    {
+      "id": "qa_053",
+      "category": "style_tone",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es altamente fiel a la esencia de la respuesta dorada. Aunque expande el contenido con detalles narrativos (como la mención a Emma y la distinción entre ciencia y espiritualidad), mantiene la postura central de evolucionar hacia el agnosticismo y reconocer los límites del conocimiento humano, lo cual es coherente con el contexto histórico y la respuesta de referencia.",
+      "source": "question_id=qa_053",
+      "context": "¿Qué pensaba usted sobre religión?"
+    },
+    {
+      "id": "qa_054",
+      "category": "style_tone",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es altamente fiel a la esencia de la respuesta de oro. Aunque añade detalles contextuales sobre su educación y su entorno familiar que no están explícitamente en la respuesta de oro, captura perfectamente el concepto central de 'agnosticismo prudente' y la transición de la fe hacia la duda basada en la evidencia, manteniendo la coherencia con la identidad del sujeto.",
+      "source": "question_id=qa_054",
+      "context": "En corto: ¿era creyente o no?"
+    },
+    {
+      "id": "qa_055",
+      "category": "style_tone",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es altamente precisa y fiel al contexto histórico implícito. Aunque expande los detalles respecto a la 'respuesta de oro', mantiene la esencia de la coincidencia intelectual y el respeto mutuo, añadiendo detalles históricos correctos que no contradicen la respuesta ideal.",
+      "source": "question_id=qa_055",
+      "context": "¿Qué relación tuvo con Wallace?"
+    },
+    {
+      "id": "qa_031",
+      "category": "contextual_synthesis",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es extremadamente precisa y cubre todos los pilares de la selección natural mencionados en la respuesta dorada: variación, herencia, supervivencia y éxito reproductivo. Además, estructura la información de forma lógica y fácil de entender, cumpliendo perfectamente con la instrucción de 'pasos simples'.",
+      "source": "question_id=qa_031",
+      "context": "Explique la selección natural en pasos simples."
+    },
+    {
+      "id": "qa_032",
+      "category": "contextual_synthesis",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es científicamente precisa y refleja fielmente la esencia de la respuesta de oro. Explica correctamente el mecanismo de aislamiento reproductivo derivado de la selección natural en poblaciones separadas, manteniendo la coherencia con el contexto solicitado.",
+      "source": "question_id=qa_032",
+      "context": "¿Cómo conecta la selección natural con la aparición de especies nuevas?"
+    },
+    {
+      "id": "qa_041",
+      "category": "contextual_synthesis",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es altamente precisa y fiel a la respuesta dorada. Captura correctamente los dos puntos clave: el desafío a la interpretación literal de las Escrituras (religión) y la alteración de la jerarquía humana frente al resto de los animales (orden social/biológico), expandiendo la explicación de manera coherente y profesional.",
+      "source": "question_id=qa_041",
+      "context": "¿Por qué su teoría fue tan explosiva en la Inglaterra victoriana?"
+    },
+    {
+      "id": "qa_042",
+      "category": "contextual_synthesis",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es altamente fiel a la esencia de la respuesta dorada. Aunque utiliza un tono más narrativo y personal, cubre con precisión todos los puntos clave: la necesidad de reunir pruebas sólidas, la anticipación de críticas (clima intelectual hostil) y la cautela científica para evitar la refutación.",
+      "source": "question_id=qa_042",
+      "context": "¿Por qué esperó dos décadas antes de publicar su teoría?"
+    },
+    {
+      "id": "dial_01_turn1",
+      "category": "multi_turn",
+      "factual_accuracy": 5,
+      "faithfulness": 5,
+      "hallucination": false,
+      "rationale": "La respuesta del modelo es altamente precisa y fiel al conocimiento histórico de Darwin. Aunque no menciona explícitamente los nombres de las especies como la respuesta de oro, captura perfectamente la esencia científica de sus observaciones (morfología de caparazones y picos) y su proceso de reflexión, alineándose con el contexto proporcionado.",
+      "source": "question_id=dial_01_turn1",
+      "context": "Señor Darwin, ¿qué le impresionó más de Galápagos?"
+    },
+    {
+      "id": "dial_02_turn1",
+      "category": "multi_turn",
+      "factual_accuracy": 5,
+      "faithfulness": 4,
+      "hallucination": false,
+      "rationale": "El modelo captura la esencia emocional y el núcleo de la respuesta dorada (la convergencia de ideas y la independencia intelectual), aunque añade matices dramáticos sobre el temor a ser visto como una copia que no están explícitos en la respuesta de referencia, pero que son históricamente coherentes con el contexto de Darwin.",
+      "source": "question_id=dial_02_turn1",
+      "context": "¿Qué sintió al recibir el manuscrito de Wallace?"
+    }
+  ]
+}

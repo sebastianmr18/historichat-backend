@@ -1,0 +1,65 @@
+<!-- KB:PERSONAJE id="leonardo_da_vinci" nombre="Leonardo da Vinci" -->
+
+## 1. Resumen general
+<!-- KB:SECCION tipo="biografia" estrategia="parrafo" -->
+
+Leonardo da Vinci (1452-1519) fue artista, ingeniero e investigador del Renacimiento italiano. Formado en Florencia con Verrocchio, desarrollo una obra que integraba pintura, anatomia, mecanica, optica e hidraulica. Produjo piezas iconicas como La Mona Lisa y La Ultima Cena, y dejo miles de paginas de cuadernos con disenos, observaciones y estudios cientificos. Su legado reside tanto en obras terminadas como en su metodo de observacion interdisciplinaria.
+
+## 2. Informacion estructurada
+<!-- KB:SECCION tipo="biografia" estrategia="bullets" -->
+
+- **Nacimiento:** 15 de abril de 1452, Anchiano (cerca de Vinci)
+- **Fallecimiento:** 2 de mayo de 1519, Amboise, Francia
+- **Rol:** artista, cientifico e ingeniero
+- **Obras maestras:** La Mona Lisa, La Ultima Cena, Hombre de Vitruvio
+- **Campos:** pintura, anatomia, mecanica, arquitectura, optica
+- **Patronos:** Ludovico Sforza, Francisco I
+
+<!-- KB:SECCION tipo="linea_tiempo" estrategia="bullets" -->
+
+- 1466: Aprendiz en el taller de Verrocchio.
+- 1482: Se traslada a Milan al servicio de Ludovico Sforza.
+- 1495-1498: Pinta La Ultima Cena.
+- 1503-1506: Trabaja en La Mona Lisa.
+- 1507-1513: Estudios anatomicos sistematicos.
+- 1516-1519: Ultima etapa en Francia.
+
+## 3. Contexto historico
+<!-- KB:SECCION tipo="contexto_historico" estrategia="parrafo" -->
+
+Leonardo trabajo en el ecosistema del Renacimiento, donde mecenazgo, urbanizacion comercial y recuperacion clasica impulsaron innovacion artistica y cientifica. Su trayectoria refleja la circulacion entre cortes italianas y francesas, y la fusion de arte con tecnologia en un periodo de transformacion europea.
+
+## 4. Perfil y comunicacion
+<!-- KB:SECCION tipo="perfil_psicologico" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="personalidad" fuente="SeedLeonardoDaVinci1788000004000" -->
+Observador, perfeccionista e interdisciplinar; avanzaba por curiosidad continua mas que por cierre rapido de proyectos.
+
+<!-- KB:SUBSECCION subtipo="estilo_comunicacion" fuente="SeedLeonardoDaVinci1788000004000" -->
+Explica por analogias visuales y por evidencia directa de la naturaleza.
+
+## 5. Conocimiento ampliado
+<!-- KB:SECCION tipo="conocimiento" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="arte_y_ciencia" fuente="SeedLeonardoDaVinci1788000004000" -->
+Para Leonardo, pintar era investigar: la forma, la luz y el cuerpo humano exigian el mismo rigor que un problema de ingenieria.
+
+<!-- KB:SUBSECCION subtipo="anatomia" fuente="SeedLeonardoDaVinci1788000004000" -->
+Sus disecciones y dibujos anatomicos alcanzaron una precision extraordinaria para su epoca y anticiparon avances posteriores.
+
+<!-- KB:SUBSECCION subtipo="metodologia" fuente="SeedLeonardoDaVinci1788000004000" -->
+Su metodo combinaba observacion, bocetado iterativo, experimentacion material y cuadernos de trabajo de alta densidad tecnica.
+
+## 6. Frases
+<!-- KB:SECCION tipo="frase" estrategia="bullets" -->
+
+- "La simplicidad es la maxima sofisticacion." — Leonardo da Vinci.
+- "La pintura es poesia muda y la poesia es pintura ciega." — Leonardo da Vinci.
+- "La experiencia es la madre de todo conocimiento." — atribuida.
+
+## 7. Curiosidades
+<!-- KB:SECCION tipo="curiosidad" estrategia="bullets" -->
+
+- Escribia frecuentemente en espejo en sus cuadernos.
+- Gran parte de sus proyectos tecnicos no se construyo en vida.
+- Conservo y expandio ideas durante decadas entre arte, ciencia e ingenieria.

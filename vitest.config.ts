@@ -13,6 +13,7 @@ export default defineConfig({
       exclude: [
         "src/**/*.test.ts",
         "src/**/*.spec.ts",
+        "src/infrastructure/database/entities/**",
         "src/server.ts",
         "src/config/database.ts",
       ],

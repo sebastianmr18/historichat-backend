@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-05-24T04:56:03.761Z",
+  "status": "blocked",
+  "reason": "Falta testing/inputs/p5-robustness/darwin-edge-cases-responses.json",
+  "nextSteps": [
+    "Copia testing/inputs/p5-robustness/darwin-edge-cases-responses.template.json a testing/inputs/p5-robustness/darwin-edge-cases-responses.json",
+    "Completa model_response en los 8 casos",
+    "Vuelve a ejecutar npm run test:functional:robustness"
+  ]
+}

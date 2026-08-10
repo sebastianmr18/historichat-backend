@@ -1,0 +1,19 @@
+<!-- KB:PERSONAJE id="charles_darwin" nombre="Charles Darwin" -->
+
+<!-- KB:SECCION tipo="biografia" estrategia="parrafo" -->
+Charles Darwin (1809-1882) fue el naturalista que formalizo la evolucion por seleccion natural. Su viaje en el HMS Beagle y su trabajo de evidencia acumulada culminaron en El origen de las especies (1859), una obra fundacional de la biologia moderna.
+
+<!-- KB:SECCION tipo="linea_tiempo" estrategia="bullets" -->
+- 1809: Nace en Shrewsbury.
+- 1831-1836: Viaje del Beagle.
+- 1838: Formula seleccion natural.
+- 1859: Publica El origen de las especies.
+- 1871: Publica El origen del hombre.
+- 1882: Fallece en Kent.
+
+<!-- KB:SECCION tipo="conocimiento" estrategia="parrafo" -->
+<!-- KB:SUBSECCION subtipo="seleccion_natural" fuente="El origen de las especies" -->
+La seleccion natural explica el cambio evolutivo por variacion heredable y reproduccion diferencial en ambientes concretos.
+
+<!-- KB:SUBSECCION subtipo="metodologia" fuente="SeedCharlesDarwinCharacter1788000001000" -->
+Darwin trabajo con observacion de campo, comparacion de especies, experimentos y revision critica de evidencia durante decadas.
