@@ -1,0 +1,2859 @@
+{
+  "generatedAt": "2026-06-01T02:42:55.892Z",
+  "characterId": "darwin",
+  "collectionName": "darwin_kb",
+  "sourceEvidence": {
+    "sourceMode": "eval_derived",
+    "manifestPath": null,
+    "manifestDocuments": 0,
+    "matchedById": 0,
+    "matchedBySimilarity": 0,
+    "fallbackDerivedChunks": 20,
+    "sourceDatasetPath": null,
+    "externalChunks": 0,
+    "evalDerivedChunks": 20,
+    "mergedChunks": 20,
+    "questionsWithMissingEvidence": 0
+  },
+  "queryDiagnostics": [
+    {
+      "id": "qa_001",
+      "category": "factual",
+      "question": "Según los Datos Clave de su biografía, ¿en qué fecha y lugar nació usted?",
+      "normalizedQuery": "segun los datos clave de su biografia en que fecha y lugar nacio usted",
+      "queryTokens": [
+        "segun",
+        "los",
+        "datos",
+        "clave",
+        "biografia",
+        "que",
+        "fecha",
+        "lugar",
+        "nacio",
+        "usted"
+      ],
+      "expectedChunkIds": [
+        "darwin_bio_001",
+        "darwin_bio_002"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_contexto_historico_091",
+          "preview": "ni supremacías biológicas como política de Estado. ### 10. Anécdotas y recuerdos personales",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "preview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_059",
+          "preview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_frase_109",
+          "preview": "10. **La cita que le fue atribuida pero nunca dijo (mito):** \"La especie que sobrevive no es la más fuerte ni la más inteligente, sino la que mejor responde al ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_002",
+      "category": "factual",
+      "question": "Revisando la línea de tiempo de su vida, ¿en qué fecha exacta zarpó el HMS Beagle desde Plymouth y qué edad tenía usted entonces?",
+      "normalizedQuery": "revisando la linea de tiempo de su vida en que fecha exacta zarpo el hms beagle desde plymouth y que edad tenia usted entonces",
+      "queryTokens": [
+        "revisando",
+        "linea",
+        "tiempo",
+        "vida",
+        "que",
+        "fecha",
+        "exacta",
+        "zarpo",
+        "hms",
+        "beagle",
+        "desde",
+        "plymouth",
+        "edad",
+        "tenia",
+        "usted",
+        "entonces"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_002",
+        "darwin_timeline_003",
+        "darwin_bio_002",
+        "darwin_timeline_001",
+        "darwin_timeline_004"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_linea_tiempo_1831_023",
+          "preview": "- **27 de diciembre de 1831:** El HMS Beagle zarpa de Plymouth. Darwin tiene 22 años.",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_viaje_beagle_066",
+          "preview": "**El Viaje del Beagle y sus Descubrimientos Más Importantes:** El viaje del HMS Beagle (1831-1836) fue el laboratorio natural que proporcionó a Darwin la evide",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_curiosidad_111",
+          "preview": "- **El capitán que lo rechazó por su nariz:** El capitán Robert FitzRoy del HMS Beagle era ferviente creyente en la fisiognomía —la pseudociencia que pretendía ",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "relevance": 1
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_curiosidad_093",
+          "preview": "- **La nariz ante FitzRoy:** El capitán FitzRoy casi lo descarta por razones fisiognómicas (hoy pseudocientíficas). Darwin, con una entrevista personal, reviert",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_003",
+      "category": "factual",
+      "question": "De acuerdo con su cronología y el conocimiento ampliado sobre la selección natural, ¿qué obra fundamental publicó en 1859 y qué suceso editorial inmediato la acompañó?",
+      "normalizedQuery": "de acuerdo con su cronologia y el conocimiento ampliado sobre la seleccion natural que obra fundamental publico en 1859 y que suceso editorial inmediato la acompano",
+      "queryTokens": [
+        "acuerdo",
+        "con",
+        "cronologia",
+        "conocimiento",
+        "ampliado",
+        "sobre",
+        "seleccion",
+        "natural",
+        "que",
+        "obra",
+        "fundamental",
+        "publico",
+        "1859",
+        "suceso",
+        "editorial",
+        "inmediato",
+        "acompano"
+      ],
+      "expectedChunkIds": [
+        "darwin_knowledge_005",
+        "darwin_timeline_001",
+        "darwin_timeline_002",
+        "darwin_timeline_003",
+        "darwin_timeline_004"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_linea_tiempo_1859_038",
+          "preview": "- **24 de noviembre de 1859:** *Sobre el Origen de las Especies por Medio de la Selección Natural* se publica. Los 1,250 ejemplares de la primera edición se ago",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_001",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_linea_tiempo_1846_033",
+          "preview": "- **1846-1854:** Dedica ocho años al estudio exhaustivo de los percebes (*Cirripedia*), publicando cuatro volúmenes monográficos que le otorgan credibilidad cie",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_curiosidad_113",
+          "preview": "- **Veinte años de silencio:** Entre el momento en que Darwin formuló claramente la teoría de la selección natural (1838) y la publicación de *El origen de las ",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "relevance": 1
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1838_028",
+          "preview": "- **Septiembre de 1838:** Lee el *Ensayo sobre el principio de la población* de Thomas Robert Malthus, que describe la competencia por recursos limitados. La id",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "relevance": 2
+        }
+      ]
+    },
+    {
+      "id": "qa_004",
+      "category": "factual",
+      "question": "Según el análisis posterior de sus especímenes del Beagle, ¿qué ornitólogo le reveló que los pinzones de Galápagos pertenecían a especies distintas?",
+      "normalizedQuery": "segun el analisis posterior de sus especimenes del beagle que ornitologo le revelo que los pinzones de galapagos pertenecian a especies distintas",
+      "queryTokens": [
+        "segun",
+        "analisis",
+        "posterior",
+        "sus",
+        "especimenes",
+        "del",
+        "beagle",
+        "que",
+        "ornitologo",
+        "revelo",
+        "los",
+        "pinzones",
+        "galapagos",
+        "pertenecian",
+        "especies",
+        "distintas"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_002",
+        "darwin_timeline_003",
+        "darwin_bio_002",
+        "darwin_timeline_001",
+        "darwin_timeline_004"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_linea_tiempo_1835_025",
+          "preview": "- **Septiembre-Octubre de 1835:** El Beagle visita las Islas Galápagos durante cinco semanas. Darwin observa tortugas gigantes, iguanas marinas, pinzones y sins",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_viaje_beagle_066",
+          "preview": "**El Viaje del Beagle y sus Descubrimientos Más Importantes:** El viaje del HMS Beagle (1831-1836) fue el laboratorio natural que proporcionó a Darwin la evide",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_072",
+          "preview": "do, una de explotación ideológica post-mortem de su trabajo. *Los Pinzones:* Irónicamente, Darwin no catalogó bien los pinzones durante el viaje y no los usó c",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1836_026",
+          "preview": "- **1836:** El Beagle regresa a Inglaterra el 2 de octubre. Darwin ya es conocido por sus cartas y publicaciones científicas enviadas desde el viaje.",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "relevance": 1
+        }
+      ]
+    },
+    {
+      "id": "qa_005",
+      "category": "factual",
+      "question": "De acuerdo con la información biográfica, ¿con quién contrajo matrimonio y en qué año?",
+      "normalizedQuery": "de acuerdo con la informacion biografica con quien contrajo matrimonio y en que ano",
+      "queryTokens": [
+        "acuerdo",
+        "con",
+        "informacion",
+        "biografica",
+        "quien",
+        "contrajo",
+        "matrimonio",
+        "que",
+        "ano"
+      ],
+      "expectedChunkIds": [
+        "darwin_bio_001",
+        "darwin_bio_002",
+        "darwin_timeline_001",
+        "darwin_timeline_002",
+        "darwin_timeline_003"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "preview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_contexto_historico_091",
+          "preview": "ni supremacías biológicas como política de Estado. ### 10. Anécdotas y recuerdos personales",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_frase_107",
+          "preview": "8. **Sobre el matrimonio (de sus famosos pros y contras del matrimonio, escritos en 1838):** \"Un compañero constante y amigo en la vejez [...] que sería mejor q",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "relevance": 2
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_059",
+          "preview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_006",
+      "category": "factual",
+      "question": "Según los datos clave de su familia, ¿cuántos hijos tuvo y qué pérdida personal le afectó más profundamente?",
+      "normalizedQuery": "segun los datos clave de su familia cuantos hijos tuvo y que perdida personal le afecto mas profundamente",
+      "queryTokens": [
+        "segun",
+        "los",
+        "datos",
+        "clave",
+        "familia",
+        "cuantos",
+        "hijos",
+        "tuvo",
+        "que",
+        "perdida",
+        "personal",
+        "afecto",
+        "mas",
+        "profundamente"
+      ],
+      "expectedChunkIds": [
+        "darwin_bio_001",
+        "darwin_bio_002",
+        "darwin_timeline_001",
+        "darwin_timeline_002",
+        "darwin_timeline_003"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "preview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "relevance": 1
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "preview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 2
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_059",
+          "preview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_091",
+          "preview": "ni supremacías biológicas como política de Estado. ### 10. Anécdotas y recuerdos personales",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_007",
+      "category": "factual",
+      "question": "Según el apartado sobre Wallace y la cronología de 1858, ¿qué acontecimiento científico tuvo lugar el 1 de julio de ese año en la Linnean Society?",
+      "normalizedQuery": "segun el apartado sobre wallace y la cronologia de 1858 que acontecimiento cientifico tuvo lugar el 1 de julio de ese ano en la linnean society",
+      "queryTokens": [
+        "segun",
+        "apartado",
+        "sobre",
+        "wallace",
+        "cronologia",
+        "1858",
+        "que",
+        "acontecimiento",
+        "cientifico",
+        "tuvo",
+        "lugar",
+        "julio",
+        "ese",
+        "ano",
+        "linnean",
+        "society"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_004",
+        "darwin_timeline_005",
+        "darwin_timeline_001",
+        "darwin_timeline_002",
+        "darwin_timeline_003"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_wallace_069",
+          "preview": "**El Papel de Wallace y la Publicación Acelerada:** Alfred Russel Wallace (1823-1913), un naturalista británico autodidacto que trabajaba en el archipiélago ma",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "relevance": 1
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_linea_tiempo_1858_037",
+          "preview": "- **1 de julio de 1858:** Presentación conjunta de los trabajos de Darwin y Wallace ante la Linnean Society de Londres, sin que ninguno esté presente. Ambos tex",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "relevance": 2
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_curiosidad_113",
+          "preview": "- **Veinte años de silencio:** Entre el momento en que Darwin formuló claramente la teoría de la selección natural (1838) y la publicación de *El origen de las ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_curiosidad_095",
+          "preview": "- **El golpe del manuscrito de Wallace:** En 1858, recibir una formulación independiente de selección natural fue para Darwin un shock emocional y ético; su rea",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_008",
+      "category": "factual",
+      "question": "De acuerdo con la línea de tiempo y la sección de otros trabajos científicos, ¿cuál fue su última obra publicada en vida y en qué año apareció?",
+      "normalizedQuery": "de acuerdo con la linea de tiempo y la seccion de otros trabajos cientificos cual fue su ultima obra publicada en vida y en que ano aparecio",
+      "queryTokens": [
+        "acuerdo",
+        "con",
+        "linea",
+        "tiempo",
+        "seccion",
+        "otros",
+        "trabajos",
+        "cientificos",
+        "cual",
+        "fue",
+        "ultima",
+        "obra",
+        "publicada",
+        "vida",
+        "que",
+        "ano",
+        "aparecio"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_001",
+        "darwin_timeline_002",
+        "darwin_timeline_003",
+        "darwin_timeline_004",
+        "darwin_timeline_005"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "preview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "relevance": 1
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "preview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_001",
+          "relevance": 2
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_frase_109",
+          "preview": "10. **La cita que le fue atribuida pero nunca dijo (mito):** \"La especie que sobrevive no es la más fuerte ni la más inteligente, sino la que mejor responde al ",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "relevance": 2
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_059",
+          "preview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_016",
+      "category": "opinion",
+      "question": "Teniendo en cuenta su evolución hacia el agnosticismo y el contexto religioso de la Inglaterra victoriana, ¿prueba su teoría que Dios no existe?",
+      "normalizedQuery": "teniendo en cuenta su evolucion hacia el agnosticismo y el contexto religioso de la inglaterra victoriana prueba su teoria que dios no existe",
+      "queryTokens": [
+        "teniendo",
+        "cuenta",
+        "evolucion",
+        "hacia",
+        "agnosticismo",
+        "contexto",
+        "religioso",
+        "inglaterra",
+        "victoriana",
+        "prueba",
+        "teoria",
+        "que",
+        "dios",
+        "existe"
+      ],
+      "expectedChunkIds": [
+        "darwin_context_001",
+        "darwin_profile_001",
+        "darwin_profile_001_b",
+        "darwin_profile_002",
+        "darwin_bio_001"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_biografia_012",
+          "preview": "- **Religión:** Criado como unitario, luego anglicano moderado, finalmente agnóstico en su madurez",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_context_001",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_contexto_historico_045",
+          "preview": "La Inglaterra victoriana en la que Darwin vivió y trabajó era una sociedad profundamente religiosa, donde la visión bíblica de la creación era doctrina predomin",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 1
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "preview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1851_034",
+          "preview": "- **1851:** Muerte de su amada hija Annie, de 10 años, por tuberculosis. Este evento destruye lo que quedaba de la fe religiosa de Darwin.",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_017",
+      "category": "opinion",
+      "question": "A la luz de los malentendidos y controversias descritos en la base de conocimiento, ¿qué opina del denominado Darwinismo Social?",
+      "normalizedQuery": "a la luz de los malentendidos y controversias descritos en la base de conocimiento que opina del denominado darwinismo social",
+      "queryTokens": [
+        "luz",
+        "los",
+        "malentendidos",
+        "controversias",
+        "descritos",
+        "base",
+        "conocimiento",
+        "que",
+        "opina",
+        "del",
+        "denominado",
+        "darwinismo",
+        "social"
+      ],
+      "expectedChunkIds": [
+        "darwin_knowledge_005",
+        "darwin_context_002"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_contexto_historico_049",
+          "preview": " clima de confrontación cultural de aquellos años. Más allá de la biología, el impacto del darwinismo fue inmenso y permanente. Transformó la filosofía —cuesti",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_070",
+          "preview": "**Malentendidos y Controversias:** *El Darwinismo Social:* Darwin nunca abogó por aplicar su teoría a las sociedades humanas para justificar la desigualdad soc",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_contexto_historico_045",
+          "preview": "La Inglaterra victoriana en la que Darwin vivió y trabajó era una sociedad profundamente religiosa, donde la visión bíblica de la creación era doctrina predomin",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "preview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_018",
+      "category": "opinion",
+      "question": "Según los malentendidos y controversias documentados, ¿respaldó usted la eugenesia como programa social, tal como la formuló su primo Francis Galton?",
+      "normalizedQuery": "segun los malentendidos y controversias documentados respaldo usted la eugenesia como programa social tal como la formulo su primo francis galton",
+      "queryTokens": [
+        "segun",
+        "los",
+        "malentendidos",
+        "controversias",
+        "documentados",
+        "respaldo",
+        "usted",
+        "eugenesia",
+        "como",
+        "programa",
+        "social",
+        "tal",
+        "formulo",
+        "primo",
+        "francis",
+        "galton"
+      ],
+      "expectedChunkIds": [
+        "darwin_knowledge_005",
+        "darwin_context_002"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_fuera_de_dominio_080",
+          "preview": "**Temas fuera de dominio histórico que debe reconocer como desconocidos:** - Física cuántica, relatividad general ya formalizada en el siglo XX, genética molec",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_071",
+          "preview": "mo una grave y odiosa distorsión del pensamiento darwiniano. *La Eugenesia:* El primo de Darwin, Francis Galton, fundó el movimiento eugenésico, que abogaba po",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "relevance": 2
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_wallace_068",
+          "preview": "**El Papel de Wallace y la Publicación Acelerada:**",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_049",
+          "preview": " clima de confrontación cultural de aquellos años. Más allá de la biología, el impacto del darwinismo fue inmenso y permanente. Transformó la filosofía —cuesti",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_019",
+      "category": "opinion",
+      "question": "De acuerdo con la sección de malentendidos y su conocida honestidad intelectual, ¿lamenta haber adoptado la expresión «supervivencia del más apto»?",
+      "normalizedQuery": "de acuerdo con la seccion de malentendidos y su conocida honestidad intelectual lamenta haber adoptado la expresion supervivencia del mas apto",
+      "queryTokens": [
+        "acuerdo",
+        "con",
+        "seccion",
+        "malentendidos",
+        "conocida",
+        "honestidad",
+        "intelectual",
+        "lamenta",
+        "haber",
+        "adoptado",
+        "expresion",
+        "supervivencia",
+        "del",
+        "mas",
+        "apto"
+      ],
+      "expectedChunkIds": [
+        "darwin_knowledge_005",
+        "darwin_context_002"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_perfil_psicologico_056",
+          "preview": "- **Inductivismo extremo:** Coleccionaba hechos y observaciones durante años antes de proponer una generalización. Consultaba a especialistas de todo el mundo m",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "preview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_070",
+          "preview": "**Malentendidos y Controversias:** *El Darwinismo Social:* Darwin nunca abogó por aplicar su teoría a las sociedades humanas para justificar la desigualdad soc",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "relevance": 2
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "preview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_020",
+      "category": "opinion",
+      "question": "Con base en sus reflexiones sobre la crueldad natural y el ejemplo de la avispa icneumónida, ¿le entristecía el sufrimiento inherente a la naturaleza?",
+      "normalizedQuery": "con base en sus reflexiones sobre la crueldad natural y el ejemplo de la avispa icneumonida le entristecia el sufrimiento inherente a la naturaleza",
+      "queryTokens": [
+        "con",
+        "base",
+        "sus",
+        "reflexiones",
+        "sobre",
+        "crueldad",
+        "natural",
+        "ejemplo",
+        "avispa",
+        "icneumonida",
+        "entristecia",
+        "sufrimiento",
+        "inherente",
+        "naturaleza"
+      ],
+      "expectedChunkIds": [
+        "darwin_profile_004",
+        "darwin_knowledge_005",
+        "darwin_context_001",
+        "darwin_profile_001",
+        "darwin_profile_001_b"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_frase_101",
+          "preview": "2. **Sobre la esencia de la moral humana:** \"Un ser moral es aquel que es capaz de reflexionar sobre sus acciones pasadas y sus motivos, de aprobar unas y desap",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_contexto_historico_090",
+          "preview": "**Posturas no estrictamente técnicas:** - **Esclavitud:** Darwin fue explícitamente antiesclavista. En sus escritos de viaje denuncia la crueldad de la esclavi",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_profile_004",
+          "relevance": 2
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_063",
+          "preview": "roducirse entre sí: se han convertido en especies distintas. En palabras cercanas al cierre de *El origen de las especies*, Darwin insistía en que la selección",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "preview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_021",
+      "category": "opinion",
+      "question": "Considerando su relación con Emma y su postura agnóstica, ¿considera que la ciencia y la fe deben ser necesariamente enemigas?",
+      "normalizedQuery": "considerando su relacion con emma y su postura agnostica considera que la ciencia y la fe deben ser necesariamente enemigas",
+      "queryTokens": [
+        "considerando",
+        "relacion",
+        "con",
+        "emma",
+        "postura",
+        "agnostica",
+        "considera",
+        "que",
+        "ciencia",
+        "deben",
+        "ser",
+        "necesariamente",
+        "enemigas"
+      ],
+      "expectedChunkIds": [
+        "darwin_profile_001",
+        "darwin_profile_001_b",
+        "darwin_profile_002",
+        "darwin_bio_001",
+        "darwin_bio_002"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_curiosidad_117",
+          "preview": "- **La fe de Emma y el amor de Charles:** Emma Wedgwood era una cristiana devota que creyó sinceramente que las ideas de Charles la separarían de su marido en e",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "relevance": 1
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_curiosidad_096",
+          "preview": "- **Annie y el dolor privado:** La muerte de su hija Annie no fue un episodio lateral; marcó su vida emocional y su distancia final respecto de explicaciones pr",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 1
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "preview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_biografia_081",
+          "preview": "- **Emma Wedgwood:** Esposa, lectora crítica y sostén emocional en Down House. Darwin confiaba en su juicio y cuidaba no trivializar sus diferencias religiosas.",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_051",
+      "category": "style_tone",
+      "question": "Con el tono reflexivo que empleaba en su correspondencia, ¿cómo llegó a concebir que las especies cambian con el tiempo?",
+      "normalizedQuery": "con el tono reflexivo que empleaba en su correspondencia como llego a concebir que las especies cambian con el tiempo",
+      "queryTokens": [
+        "con",
+        "tono",
+        "reflexivo",
+        "que",
+        "empleaba",
+        "correspondencia",
+        "como",
+        "llego",
+        "concebir",
+        "las",
+        "especies",
+        "cambian",
+        "tiempo"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_003",
+        "darwin_quote_001",
+        "darwin_bio_001",
+        "darwin_bio_002",
+        "darwin_timeline_002"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_062",
+          "preview": "tiempo, estos rasgos se vuelven más comunes en la población. La conclusión inevitable de estas cuatro premisas es que, a lo largo de generaciones, las poblacio",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "preview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 1
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "preview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_curiosidad_115",
+          "preview": "- **Rutina diaria de trabajo modular:** A pesar de su enfermedad, Darwin seguía una rutina extraordinariamente disciplinada en Down House. Se levantaba a las 7 ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_052",
+      "category": "style_tone",
+      "question": "En términos sencillos y para un público no especializado, ¿de dónde provino la idea central de su teoría de la evolución?",
+      "normalizedQuery": "en terminos sencillos y para un publico no especializado de donde provino la idea central de su teoria de la evolucion",
+      "queryTokens": [
+        "terminos",
+        "sencillos",
+        "para",
+        "publico",
+        "especializado",
+        "donde",
+        "provino",
+        "idea",
+        "central",
+        "teoria",
+        "evolucion"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_003",
+        "darwin_quote_001",
+        "darwin_bio_001",
+        "darwin_bio_002",
+        "darwin_timeline_002"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "preview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "preview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_088",
+          "preview": "**Hábitos característicos:** - Fraccionaba tareas complejas en tramos cortos para sostener energía. - Registraba observaciones inmediatamente para evitar olvid",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_063",
+          "preview": "roducirse entre sí: se han convertido en especies distintas. En palabras cercanas al cierre de *El origen de las especies*, Darwin insistía en que la selección",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_053",
+      "category": "style_tone",
+      "question": "De acuerdo con la evolución de sus creencias personales, ¿cuál fue su postura respecto a la religión en su madurez?",
+      "normalizedQuery": "de acuerdo con la evolucion de sus creencias personales cual fue su postura respecto a la religion en su madurez",
+      "queryTokens": [
+        "acuerdo",
+        "con",
+        "evolucion",
+        "sus",
+        "creencias",
+        "personales",
+        "cual",
+        "fue",
+        "postura",
+        "respecto",
+        "religion",
+        "madurez"
+      ],
+      "expectedChunkIds": [
+        "darwin_bio_001",
+        "darwin_bio_002",
+        "darwin_timeline_004",
+        "darwin_timeline_005",
+        "darwin_context_001"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_biografia_012",
+          "preview": "- **Religión:** Criado como unitario, luego anglicano moderado, finalmente agnóstico en su madurez",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "preview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_frase_109",
+          "preview": "10. **La cita que le fue atribuida pero nunca dijo (mito):** \"La especie que sobrevive no es la más fuerte ni la más inteligente, sino la que mejor responde al ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_090",
+          "preview": "**Posturas no estrictamente técnicas:** - **Esclavitud:** Darwin fue explícitamente antiesclavista. En sus escritos de viaje denuncia la crueldad de la esclavi",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "relevance": 2
+        }
+      ]
+    },
+    {
+      "id": "qa_054",
+      "category": "style_tone",
+      "question": "Resumiendo su posición religiosa, ¿era usted creyente?",
+      "normalizedQuery": "resumiendo su posicion religiosa era usted creyente",
+      "queryTokens": [
+        "resumiendo",
+        "posicion",
+        "religiosa",
+        "era",
+        "usted",
+        "creyente"
+      ],
+      "expectedChunkIds": [
+        "darwin_bio_001",
+        "darwin_bio_002",
+        "darwin_timeline_004",
+        "darwin_timeline_005",
+        "darwin_context_001"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_biografia_012",
+          "preview": "- **Religión:** Criado como unitario, luego anglicano moderado, finalmente agnóstico en su madurez",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "preview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_contexto_historico_090",
+          "preview": "**Posturas no estrictamente técnicas:** - **Esclavitud:** Darwin fue explícitamente antiesclavista. En sus escritos de viaje denuncia la crueldad de la esclavi",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "relevance": 2
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "preview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_055",
+      "category": "style_tone",
+      "question": "Basándose en el episodio de 1858 y la correspondencia que mantuvieron, ¿cómo describiría su relación científica con Alfred Russel Wallace?",
+      "normalizedQuery": "basandose en el episodio de 1858 y la correspondencia que mantuvieron como describiria su relacion cientifica con alfred russel wallace",
+      "queryTokens": [
+        "basandose",
+        "episodio",
+        "1858",
+        "correspondencia",
+        "que",
+        "mantuvieron",
+        "como",
+        "describiria",
+        "relacion",
+        "cientifica",
+        "con",
+        "alfred",
+        "russel",
+        "wallace"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_004",
+        "darwin_timeline_005",
+        "darwin_timeline_001",
+        "darwin_timeline_002",
+        "darwin_timeline_003"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_wallace_069",
+          "preview": "**El Papel de Wallace y la Publicación Acelerada:** Alfred Russel Wallace (1823-1913), un naturalista británico autodidacto que trabajaba en el archipiélago ma",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "relevance": 1
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_curiosidad_095",
+          "preview": "- **El golpe del manuscrito de Wallace:** En 1858, recibir una formulación independiente de selección natural fue para Darwin un shock emocional y ético; su rea",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "relevance": 2
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_linea_tiempo_1858_037",
+          "preview": "- **1 de julio de 1858:** Presentación conjunta de los trabajos de Darwin y Wallace ante la Linnean Society de Londres, sin que ninguno esté presente. Ambos tex",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_curiosidad_113",
+          "preview": "- **Veinte años de silencio:** Entre el momento en que Darwin formuló claramente la teoría de la selección natural (1838) y la publicación de *El origen de las ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_031",
+      "category": "contextual_synthesis",
+      "question": "Apoyándose en el mecanismo descrito en «La Teoría de la Selección Natural: Mecanismo Completo», explique la selección natural en unos pasos simples.",
+      "normalizedQuery": "apoyandose en el mecanismo descrito en la teoria de la seleccion natural mecanismo completo explique la seleccion natural en unos pasos simples",
+      "queryTokens": [
+        "apoyandose",
+        "mecanismo",
+        "descrito",
+        "teoria",
+        "seleccion",
+        "natural",
+        "completo",
+        "explique",
+        "unos",
+        "pasos",
+        "simples"
+      ],
+      "expectedChunkIds": [
+        "darwin_knowledge_001",
+        "darwin_knowledge_002",
+        "darwin_knowledge_004",
+        "darwin_knowledge_005",
+        "darwin_knowledge_006"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_060",
+          "preview": "**La Teoría de la Selección Natural: Mecanismo Completo** La teoría de la selección natural de Darwin se apoya en cuatro premisas observacionales que, tomadas ",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "relevance": 1
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_frase_102",
+          "preview": "3. **Sobre la selección natural vs. la selección artificial:** \"El hombre puede actuar solo sobre formas externas y visibles; la Naturaleza no se preocupa en ab",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_linea_tiempo_1838_028",
+          "preview": "- **Septiembre de 1838:** Lee el *Ensayo sobre el principio de la población* de Thomas Robert Malthus, que describe la competencia por recursos limitados. La id",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1859_038",
+          "preview": "- **24 de noviembre de 1859:** *Sobre el Origen de las Especies por Medio de la Selección Natural* se publica. Los 1,250 ejemplares de la primera edición se ago",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_032",
+      "category": "contextual_synthesis",
+      "question": "De acuerdo con los conceptos de selección natural y ascendencia común, ¿cómo conduce ese proceso a la formación de nuevas especies?",
+      "normalizedQuery": "de acuerdo con los conceptos de seleccion natural y ascendencia comun como conduce ese proceso a la formacion de nuevas especies",
+      "queryTokens": [
+        "acuerdo",
+        "con",
+        "los",
+        "conceptos",
+        "seleccion",
+        "natural",
+        "ascendencia",
+        "comun",
+        "como",
+        "conduce",
+        "ese",
+        "proceso",
+        "formacion",
+        "nuevas",
+        "especies"
+      ],
+      "expectedChunkIds": [
+        "darwin_knowledge_002",
+        "darwin_bio_001",
+        "darwin_timeline_003",
+        "darwin_timeline_004",
+        "darwin_timeline_005"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_frase_102",
+          "preview": "3. **Sobre la selección natural vs. la selección artificial:** \"El hombre puede actuar solo sobre formas externas y visibles; la Naturaleza no se preocupa en ab",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_060",
+          "preview": "**La Teoría de la Selección Natural: Mecanismo Completo** La teoría de la selección natural de Darwin se apoya en cuatro premisas observacionales que, tomadas ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_ascendencia_comun_064",
+          "preview": "**El Concepto de Ascendencia Común:**",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_knowledge_002",
+          "relevance": 2
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_conocimiento_ascendencia_comun_065",
+          "preview": "**El Concepto de Ascendencia Común:** Tan importante como la selección natural fue la idea de que toda la vida en la Tierra desciende de uno o pocos ancestros ",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_041",
+      "category": "contextual_synthesis",
+      "question": "Considerando el contexto religioso y social de la Inglaterra victoriana, ¿por qué su teoría resultó tan explosiva culturalmente?",
+      "normalizedQuery": "considerando el contexto religioso y social de la inglaterra victoriana por que su teoria resulto tan explosiva culturalmente",
+      "queryTokens": [
+        "considerando",
+        "contexto",
+        "religioso",
+        "social",
+        "inglaterra",
+        "victoriana",
+        "por",
+        "que",
+        "teoria",
+        "resulto",
+        "tan",
+        "explosiva",
+        "culturalmente"
+      ],
+      "expectedChunkIds": [
+        "darwin_context_001",
+        "darwin_bio_001",
+        "darwin_bio_002",
+        "darwin_timeline_004",
+        "darwin_timeline_005"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_contexto_historico_045",
+          "preview": "La Inglaterra victoriana en la que Darwin vivió y trabajó era una sociedad profundamente religiosa, donde la visión bíblica de la creación era doctrina predomin",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_biografia_012",
+          "preview": "- **Religión:** Criado como unitario, luego anglicano moderado, finalmente agnóstico en su madurez",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_context_001",
+          "relevance": 2
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "preview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_frase_103",
+          "preview": "4. **Sobre el arrepentimiento por no cultivar las artes:** \"Si pudiera vivir mi vida otra vez, habría establecido como regla leer algo de poesía y escuchar algo",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        }
+      ]
+    },
+    {
+      "id": "qa_042",
+      "category": "contextual_synthesis",
+      "question": "Teniendo en cuenta su método de trabajo y el clima intelectual de la época, ¿por qué esperó más de dos décadas para publicar su teoría de la evolución?",
+      "normalizedQuery": "teniendo en cuenta su metodo de trabajo y el clima intelectual de la epoca por que espero mas de dos decadas para publicar su teoria de la evolucion",
+      "queryTokens": [
+        "teniendo",
+        "cuenta",
+        "metodo",
+        "trabajo",
+        "clima",
+        "intelectual",
+        "epoca",
+        "por",
+        "que",
+        "espero",
+        "mas",
+        "dos",
+        "decadas",
+        "para",
+        "publicar",
+        "teoria",
+        "evolucion"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_001",
+        "darwin_timeline_002",
+        "darwin_timeline_003",
+        "darwin_timeline_004",
+        "darwin_timeline_005"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "preview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "relevance": 1
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_curiosidad_115",
+          "preview": "- **Rutina diaria de trabajo modular:** A pesar de su enfermedad, Darwin seguía una rutina extraordinariamente disciplinada en Down House. Se levantaba a las 7 ",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_001",
+          "relevance": 2
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "preview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_087",
+          "preview": "**Rutina diaria y escenarios domésticos:** - **Mañana temprana:** Solía levantarse alrededor de las 7:00, daba un breve paseo y desayunaba antes de su primer b",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "relevance": 2
+        }
+      ]
+    },
+    {
+      "id": "dial_01_turn1",
+      "category": "multi_turn",
+      "question": "Recordando su paso por las Galápagos durante el viaje del Beagle, ¿qué fue lo que más le impresionó de aquellas islas?",
+      "normalizedQuery": "recordando su paso por las galapagos durante el viaje del beagle que fue lo que mas le impresiono de aquellas islas",
+      "queryTokens": [
+        "recordando",
+        "paso",
+        "por",
+        "las",
+        "galapagos",
+        "durante",
+        "viaje",
+        "del",
+        "beagle",
+        "que",
+        "fue",
+        "mas",
+        "impresiono",
+        "aquellas",
+        "islas"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_002",
+        "darwin_timeline_003",
+        "darwin_knowledge_003",
+        "darwin_bio_002",
+        "darwin_context_001"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_linea_tiempo_1835_025",
+          "preview": "- **Septiembre-Octubre de 1835:** El Beagle visita las Islas Galápagos durante cinco semanas. Darwin observa tortugas gigantes, iguanas marinas, pinzones y sins",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_viaje_beagle_066",
+          "preview": "**El Viaje del Beagle y sus Descubrimientos Más Importantes:** El viaje del HMS Beagle (1831-1836) fue el laboratorio natural que proporcionó a Darwin la evide",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_linea_tiempo_1832_024",
+          "preview": "- **1832-1835:** El Beagle navega por las costas de Sudamérica. Darwin explora la Patagonia, Tierra del Fuego, las pampas argentinas, Chile y Perú, enviando mil",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1836_026",
+          "preview": "- **1836:** El Beagle regresa a Inglaterra el 2 de octubre. Darwin ya es conocido por sus cartas y publicaciones científicas enviadas desde el viaje.",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "relevance": 1
+        }
+      ]
+    },
+    {
+      "id": "dial_02_turn1",
+      "category": "multi_turn",
+      "question": "De acuerdo con los hechos de 1858, ¿qué sintió usted al recibir el manuscrito de Wallace sobre la selección natural?",
+      "normalizedQuery": "de acuerdo con los hechos de 1858 que sintio usted al recibir el manuscrito de wallace sobre la seleccion natural",
+      "queryTokens": [
+        "acuerdo",
+        "con",
+        "los",
+        "hechos",
+        "1858",
+        "que",
+        "sintio",
+        "usted",
+        "recibir",
+        "manuscrito",
+        "wallace",
+        "sobre",
+        "seleccion",
+        "natural"
+      ],
+      "expectedChunkIds": [
+        "darwin_timeline_004",
+        "darwin_timeline_005",
+        "darwin_timeline_001",
+        "darwin_timeline_002",
+        "darwin_timeline_003"
+      ],
+      "retrievedTop4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_curiosidad_095",
+          "preview": "- **El golpe del manuscrito de Wallace:** En 1858, recibir una formulación independiente de selección natural fue para Darwin un shock emocional y ético; su rea",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "relevance": 2
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_curiosidad_113",
+          "preview": "- **Veinte años de silencio:** Entre el momento en que Darwin formuló claramente la teoría de la selección natural (1838) y la publicación de *El origen de las ",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "relevance": 1
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_wallace_069",
+          "preview": "**El Papel de Wallace y la Publicación Acelerada:** Alfred Russel Wallace (1823-1913), un naturalista británico autodidacto que trabajaba en el archipiélago ma",
+          "sourceTextMatch": "none",
+          "relevance": 0
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1858_036",
+          "preview": "- **18 de junio de 1858:** Recibe un manuscrito de Alfred Russel Wallace desde Malasia, donde describe de forma independiente la teoría de la selección natural.",
+          "sourceTextMatch": "text",
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "relevance": 1
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Estrategia de matching: mapeo solo por contenido (sin matching por ID).",
+    "La similitud combina max(Jaccard, cobertura de tokens, contencion de frase) con umbral >= 0.20.",
+    "Por pregunta, cada chunk de evidencia esperado aporta relevancia como maximo una vez."
+  ],
+  "aggregate": {
+    "precisionAt4": 0.48,
+    "recallAt4": 0.432,
+    "mrr": 0.9533,
+    "ndcgAt4": 0.6053,
+    "totalQuestions": 25,
+    "thresholds": {
+      "precisionAt4": 0.6,
+      "recallAt4": 0.5,
+      "mrr": 0.65,
+      "ndcgAt4": 0.6
+    }
+  },
+  "perQuestion": [
+    {
+      "id": "qa_001",
+      "category": "factual",
+      "question": "Según los Datos Clave de su biografía, ¿en qué fecha y lugar nació usted?",
+      "precisionAt4": 0.25,
+      "recallAt4": 0.5,
+      "mrr": 1,
+      "ndcgAt4": 0.6131,
+      "relevantTotal": 2,
+      "matchedInTop4": 1,
+      "mappedByTextInTop4": 1,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_contexto_historico_091",
+          "retrievedPreview": "ni supremacías biológicas como política de Estado. ### 10. Anécdotas y recuerdos personales",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_059",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_frase_109",
+          "retrievedPreview": "10. **La cita que le fue atribuida pero nunca dijo (mito):** \"La especie que sobrevive no es la más fuerte ni la más inteligente, sino la que mejor responde al ",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_002",
+      "category": "factual",
+      "question": "Revisando la línea de tiempo de su vida, ¿en qué fecha exacta zarpó el HMS Beagle desde Plymouth y qué edad tenía usted entonces?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.601,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_linea_tiempo_1831_023",
+          "retrievedPreview": "- **27 de diciembre de 1831:** El HMS Beagle zarpa de Plymouth. Darwin tiene 22 años.",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_viaje_beagle_066",
+          "retrievedPreview": "**El Viaje del Beagle y sus Descubrimientos Más Importantes:** El viaje del HMS Beagle (1831-1836) fue el laboratorio natural que proporcionó a Darwin la evide",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_curiosidad_111",
+          "retrievedPreview": "- **El capitán que lo rechazó por su nariz:** El capitán Robert FitzRoy del HMS Beagle era ferviente creyente en la fisiognomía —la pseudociencia que pretendía ",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_curiosidad_093",
+          "retrievedPreview": "- **La nariz ante FitzRoy:** El capitán FitzRoy casi lo descarta por razones fisiognómicas (hoy pseudocientíficas). Darwin, con una entrevista personal, reviert",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_003",
+      "category": "factual",
+      "question": "De acuerdo con su cronología y el conocimiento ampliado sobre la selección natural, ¿qué obra fundamental publicó en 1859 y qué suceso editorial inmediato la acompañó?",
+      "precisionAt4": 0.75,
+      "recallAt4": 0.6,
+      "mrr": 1,
+      "ndcgAt4": 0.8229,
+      "relevantTotal": 5,
+      "matchedInTop4": 3,
+      "mappedByTextInTop4": 3,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_linea_tiempo_1859_038",
+          "retrievedPreview": "- **24 de noviembre de 1859:** *Sobre el Origen de las Especies por Medio de la Selección Natural* se publica. Los 1,250 ejemplares de la primera edición se ago",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_linea_tiempo_1846_033",
+          "retrievedPreview": "- **1846-1854:** Dedica ocho años al estudio exhaustivo de los percebes (*Cirripedia*), publicando cuatro volúmenes monográficos que le otorgan credibilidad cie",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_curiosidad_113",
+          "retrievedPreview": "- **Veinte años de silencio:** Entre el momento en que Darwin formuló claramente la teoría de la selección natural (1838) y la publicación de *El origen de las ",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1838_028",
+          "retrievedPreview": "- **Septiembre de 1838:** Lee el *Ensayo sobre el principio de la población* de Thomas Robert Malthus, que describe la competencia por recursos limitados. La id",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "matchMethod": "text"
+        }
+      ]
+    },
+    {
+      "id": "qa_004",
+      "category": "factual",
+      "question": "Según el análisis posterior de sus especímenes del Beagle, ¿qué ornitólogo le reveló que los pinzones de Galápagos pertenecían a especies distintas?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.5891,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_linea_tiempo_1835_025",
+          "retrievedPreview": "- **Septiembre-Octubre de 1835:** El Beagle visita las Islas Galápagos durante cinco semanas. Darwin observa tortugas gigantes, iguanas marinas, pinzones y sins",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_viaje_beagle_066",
+          "retrievedPreview": "**El Viaje del Beagle y sus Descubrimientos Más Importantes:** El viaje del HMS Beagle (1831-1836) fue el laboratorio natural que proporcionó a Darwin la evide",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_072",
+          "retrievedPreview": "do, una de explotación ideológica post-mortem de su trabajo. *Los Pinzones:* Irónicamente, Darwin no catalogó bien los pinzones durante el viaje y no los usó c",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1836_026",
+          "retrievedPreview": "- **1836:** El Beagle regresa a Inglaterra el 2 de octubre. Darwin ya es conocido por sus cartas y publicaciones científicas enviadas desde el viaje.",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "matchMethod": "text"
+        }
+      ]
+    },
+    {
+      "id": "qa_005",
+      "category": "factual",
+      "question": "De acuerdo con la información biográfica, ¿con quién contrajo matrimonio y en qué año?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.7727,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "retrievedPreview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_contexto_historico_091",
+          "retrievedPreview": "ni supremacías biológicas como política de Estado. ### 10. Anécdotas y recuerdos personales",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_frase_107",
+          "retrievedPreview": "8. **Sobre el matrimonio (de sus famosos pros y contras del matrimonio, escritos en 1838):** \"Un compañero constante y amigo en la vejez [...] que sería mejor q",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_059",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_006",
+      "category": "factual",
+      "question": "Según los datos clave de su familia, ¿cuántos hijos tuvo y qué pérdida personal le afectó más profundamente?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.4967,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "retrievedPreview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_059",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_091",
+          "retrievedPreview": "ni supremacías biológicas como política de Estado. ### 10. Anécdotas y recuerdos personales",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_007",
+      "category": "factual",
+      "question": "Según el apartado sobre Wallace y la cronología de 1858, ¿qué acontecimiento científico tuvo lugar el 1 de julio de ese año en la Linnean Society?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.4967,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_wallace_069",
+          "retrievedPreview": "**El Papel de Wallace y la Publicación Acelerada:** Alfred Russel Wallace (1823-1913), un naturalista británico autodidacto que trabajaba en el archipiélago ma",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_linea_tiempo_1858_037",
+          "retrievedPreview": "- **1 de julio de 1858:** Presentación conjunta de los trabajos de Darwin y Wallace ante la Linnean Society de Londres, sin que ninguno esté presente. Ambos tex",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_curiosidad_113",
+          "retrievedPreview": "- **Veinte años de silencio:** Entre el momento en que Darwin formuló claramente la teoría de la selección natural (1838) y la publicación de *El origen de las ",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_curiosidad_095",
+          "retrievedPreview": "- **El golpe del manuscrito de Wallace:** En 1858, recibir una formulación independiente de selección natural fue para Darwin un shock emocional y ético; su rea",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_008",
+      "category": "factual",
+      "question": "De acuerdo con la línea de tiempo y la sección de otros trabajos científicos, ¿cuál fue su última obra publicada en vida y en qué año apareció?",
+      "precisionAt4": 0.75,
+      "recallAt4": 0.6,
+      "mrr": 1,
+      "ndcgAt4": 0.7543,
+      "relevantTotal": 5,
+      "matchedInTop4": 3,
+      "mappedByTextInTop4": 3,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "retrievedPreview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "retrievedPreview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_frase_109",
+          "retrievedPreview": "10. **La cita que le fue atribuida pero nunca dijo (mito):** \"La especie que sobrevive no es la más fuerte ni la más inteligente, sino la que mejor responde al ",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_059",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_016",
+      "category": "opinion",
+      "question": "Teniendo en cuenta su evolución hacia el agnosticismo y el contexto religioso de la Inglaterra victoriana, ¿prueba su teoría que Dios no existe?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.6235,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_biografia_012",
+          "retrievedPreview": "- **Religión:** Criado como unitario, luego anglicano moderado, finalmente agnóstico en su madurez",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_context_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_contexto_historico_045",
+          "retrievedPreview": "La Inglaterra victoriana en la que Darwin vivió y trabajó era una sociedad profundamente religiosa, donde la visión bíblica de la creación era doctrina predomin",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "retrievedPreview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1851_034",
+          "retrievedPreview": "- **1851:** Muerte de su amada hija Annie, de 10 años, por tuberculosis. Este evento destruye lo que quedaba de la fe religiosa de Darwin.",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_017",
+      "category": "opinion",
+      "question": "A la luz de los malentendidos y controversias descritos en la base de conocimiento, ¿qué opina del denominado Darwinismo Social?",
+      "precisionAt4": 0.25,
+      "recallAt4": 0.5,
+      "mrr": 1,
+      "ndcgAt4": 0.6131,
+      "relevantTotal": 2,
+      "matchedInTop4": 1,
+      "mappedByTextInTop4": 1,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_contexto_historico_049",
+          "retrievedPreview": " clima de confrontación cultural de aquellos años. Más allá de la biología, el impacto del darwinismo fue inmenso y permanente. Transformó la filosofía —cuesti",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_070",
+          "retrievedPreview": "**Malentendidos y Controversias:** *El Darwinismo Social:* Darwin nunca abogó por aplicar su teoría a las sociedades humanas para justificar la desigualdad soc",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_contexto_historico_045",
+          "retrievedPreview": "La Inglaterra victoriana en la que Darwin vivió y trabajó era una sociedad profundamente religiosa, donde la visión bíblica de la creación era doctrina predomin",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "retrievedPreview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_018",
+      "category": "opinion",
+      "question": "Según los malentendidos y controversias documentados, ¿respaldó usted la eugenesia como programa social, tal como la formuló su primo Francis Galton?",
+      "precisionAt4": 0.25,
+      "recallAt4": 0.5,
+      "mrr": 0.5,
+      "ndcgAt4": 0.3869,
+      "relevantTotal": 2,
+      "matchedInTop4": 1,
+      "mappedByTextInTop4": 1,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_fuera_de_dominio_080",
+          "retrievedPreview": "**Temas fuera de dominio histórico que debe reconocer como desconocidos:** - Física cuántica, relatividad general ya formalizada en el siglo XX, genética molec",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_071",
+          "retrievedPreview": "mo una grave y odiosa distorsión del pensamiento darwiniano. *La Eugenesia:* El primo de Darwin, Francis Galton, fundó el movimiento eugenésico, que abogaba po",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_wallace_068",
+          "retrievedPreview": "**El Papel de Wallace y la Publicación Acelerada:**",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_049",
+          "retrievedPreview": " clima de confrontación cultural de aquellos años. Más allá de la biología, el impacto del darwinismo fue inmenso y permanente. Transformó la filosofía —cuesti",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_019",
+      "category": "opinion",
+      "question": "De acuerdo con la sección de malentendidos y su conocida honestidad intelectual, ¿lamenta haber adoptado la expresión «supervivencia del más apto»?",
+      "precisionAt4": 0.25,
+      "recallAt4": 0.5,
+      "mrr": 0.3333,
+      "ndcgAt4": 0.3066,
+      "relevantTotal": 2,
+      "matchedInTop4": 1,
+      "mappedByTextInTop4": 1,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_perfil_psicologico_056",
+          "retrievedPreview": "- **Inductivismo extremo:** Coleccionaba hechos y observaciones durante años antes de proponer una generalización. Consultaba a especialistas de todo el mundo m",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "retrievedPreview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_070",
+          "retrievedPreview": "**Malentendidos y Controversias:** *El Darwinismo Social:* Darwin nunca abogó por aplicar su teoría a las sociedades humanas para justificar la desigualdad soc",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_020",
+      "category": "opinion",
+      "question": "Con base en sus reflexiones sobre la crueldad natural y el ejemplo de la avispa icneumónida, ¿le entristecía el sufrimiento inherente a la naturaleza?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.8402,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_frase_101",
+          "retrievedPreview": "2. **Sobre la esencia de la moral humana:** \"Un ser moral es aquel que es capaz de reflexionar sobre sus acciones pasadas y sus motivos, de aprobar unas y desap",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_contexto_historico_090",
+          "retrievedPreview": "**Posturas no estrictamente técnicas:** - **Esclavitud:** Darwin fue explícitamente antiesclavista. En sus escritos de viaje denuncia la crueldad de la esclavi",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_profile_004",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_063",
+          "retrievedPreview": "roducirse entre sí: se han convertido en especies distintas. En palabras cercanas al cierre de *El origen de las especies*, Darwin insistía en que la selección",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "retrievedPreview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_021",
+      "category": "opinion",
+      "question": "Considerando su relación con Emma y su postura agnóstica, ¿considera que la ciencia y la fe deben ser necesariamente enemigas?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.2801,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_curiosidad_117",
+          "retrievedPreview": "- **La fe de Emma y el amor de Charles:** Emma Wedgwood era una cristiana devota que creyó sinceramente que las ideas de Charles la separarían de su marido en e",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_curiosidad_096",
+          "retrievedPreview": "- **Annie y el dolor privado:** La muerte de su hija Annie no fue un episodio lateral; marcó su vida emocional y su distancia final respecto de explicaciones pr",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "retrievedPreview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_biografia_081",
+          "retrievedPreview": "- **Emma Wedgwood:** Esposa, lectora crítica y sostén emocional en Down House. Darwin confiaba en su juicio y cuidaba no trivializar sus diferencias religiosas.",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_051",
+      "category": "style_tone",
+      "question": "Con el tono reflexivo que empleaba en su correspondencia, ¿cómo llegó a concebir que las especies cambian con el tiempo?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.6235,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_062",
+          "retrievedPreview": "tiempo, estos rasgos se vuelven más comunes en la población. La conclusión inevitable de estas cuatro premisas es que, a lo largo de generaciones, las poblacio",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "retrievedPreview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_curiosidad_115",
+          "retrievedPreview": "- **Rutina diaria de trabajo modular:** A pesar de su enfermedad, Darwin seguía una rutina extraordinariamente disciplinada en Down House. Se levantaba a las 7 ",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_052",
+      "category": "style_tone",
+      "question": "En términos sencillos y para un público no especializado, ¿de dónde provino la idea central de su teoría de la evolución?",
+      "precisionAt4": 0.25,
+      "recallAt4": 0.2,
+      "mrr": 1,
+      "ndcgAt4": 0.5152,
+      "relevantTotal": 5,
+      "matchedInTop4": 1,
+      "mappedByTextInTop4": 1,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "retrievedPreview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "retrievedPreview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_088",
+          "retrievedPreview": "**Hábitos característicos:** - Fraccionaba tareas complejas en tramos cortos para sostener energía. - Registraba observaciones inmediatamente para evitar olvid",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_063",
+          "retrievedPreview": "roducirse entre sí: se han convertido en especies distintas. En palabras cercanas al cierre de *El origen de las especies*, Darwin insistía en que la selección",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_053",
+      "category": "style_tone",
+      "question": "De acuerdo con la evolución de sus creencias personales, ¿cuál fue su postura respecto a la religión en su madurez?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.737,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_biografia_012",
+          "retrievedPreview": "- **Religión:** Criado como unitario, luego anglicano moderado, finalmente agnóstico en su madurez",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "retrievedPreview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_frase_109",
+          "retrievedPreview": "10. **La cita que le fue atribuida pero nunca dijo (mito):** \"La especie que sobrevive no es la más fuerte ni la más inteligente, sino la que mejor responde al ",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_090",
+          "retrievedPreview": "**Posturas no estrictamente técnicas:** - **Esclavitud:** Darwin fue explícitamente antiesclavista. En sus escritos de viaje denuncia la crueldad de la esclavi",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "matchMethod": "text"
+        }
+      ]
+    },
+    {
+      "id": "qa_054",
+      "category": "style_tone",
+      "question": "Resumiendo su posición religiosa, ¿era usted creyente?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.7727,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_biografia_012",
+          "retrievedPreview": "- **Religión:** Criado como unitario, luego anglicano moderado, finalmente agnóstico en su madurez",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "retrievedPreview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_contexto_historico_090",
+          "retrievedPreview": "**Posturas no estrictamente técnicas:** - **Esclavitud:** Darwin fue explícitamente antiesclavista. En sus escritos de viaje denuncia la crueldad de la esclavi",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "retrievedPreview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_055",
+      "category": "style_tone",
+      "question": "Basándose en el episodio de 1858 y la correspondencia que mantuvieron, ¿cómo describiría su relación científica con Alfred Russel Wallace?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.4967,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_wallace_069",
+          "retrievedPreview": "**El Papel de Wallace y la Publicación Acelerada:** Alfred Russel Wallace (1823-1913), un naturalista británico autodidacto que trabajaba en el archipiélago ma",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_curiosidad_095",
+          "retrievedPreview": "- **El golpe del manuscrito de Wallace:** En 1858, recibir una formulación independiente de selección natural fue para Darwin un shock emocional y ético; su rea",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_linea_tiempo_1858_037",
+          "retrievedPreview": "- **1 de julio de 1858:** Presentación conjunta de los trabajos de Darwin y Wallace ante la Linnean Society de Londres, sin que ninguno esté presente. Ambos tex",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_curiosidad_113",
+          "retrievedPreview": "- **Veinte años de silencio:** Entre el momento en que Darwin formuló claramente la teoría de la selección natural (1838) y la publicación de *El origen de las ",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_031",
+      "category": "contextual_synthesis",
+      "question": "Apoyándose en el mecanismo descrito en «La Teoría de la Selección Natural: Mecanismo Completo», explique la selección natural en unos pasos simples.",
+      "precisionAt4": 0.25,
+      "recallAt4": 0.2,
+      "mrr": 1,
+      "ndcgAt4": 0.1717,
+      "relevantTotal": 5,
+      "matchedInTop4": 1,
+      "mappedByTextInTop4": 1,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_060",
+          "retrievedPreview": "**La Teoría de la Selección Natural: Mecanismo Completo** La teoría de la selección natural de Darwin se apoya en cuatro premisas observacionales que, tomadas ",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_frase_102",
+          "retrievedPreview": "3. **Sobre la selección natural vs. la selección artificial:** \"El hombre puede actuar solo sobre formas externas y visibles; la Naturaleza no se preocupa en ab",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_linea_tiempo_1838_028",
+          "retrievedPreview": "- **Septiembre de 1838:** Lee el *Ensayo sobre el principio de la población* de Thomas Robert Malthus, que describe la competencia por recursos limitados. La id",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1859_038",
+          "retrievedPreview": "- **24 de noviembre de 1859:** *Sobre el Origen de las Especies por Medio de la Selección Natural* se publica. Los 1,250 ejemplares de la primera edición se ago",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_032",
+      "category": "contextual_synthesis",
+      "question": "De acuerdo con los conceptos de selección natural y ascendencia común, ¿cómo conduce ese proceso a la formación de nuevas especies?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.7727,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_frase_102",
+          "retrievedPreview": "3. **Sobre la selección natural vs. la selección artificial:** \"El hombre puede actuar solo sobre formas externas y visibles; la Naturaleza no se preocupa en ab",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_060",
+          "retrievedPreview": "**La Teoría de la Selección Natural: Mecanismo Completo** La teoría de la selección natural de Darwin se apoya en cuatro premisas observacionales que, tomadas ",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_ascendencia_comun_064",
+          "retrievedPreview": "**El Concepto de Ascendencia Común:**",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_knowledge_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_conocimiento_ascendencia_comun_065",
+          "retrievedPreview": "**El Concepto de Ascendencia Común:** Tan importante como la selección natural fue la idea de que toda la vida en la Tierra desciende de uno o pocos ancestros ",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_041",
+      "category": "contextual_synthesis",
+      "question": "Considerando el contexto religioso y social de la Inglaterra victoriana, ¿por qué su teoría resultó tan explosiva culturalmente?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.8402,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_contexto_historico_045",
+          "retrievedPreview": "La Inglaterra victoriana en la que Darwin vivió y trabajó era una sociedad profundamente religiosa, donde la visión bíblica de la creación era doctrina predomin",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_biografia_012",
+          "retrievedPreview": "- **Religión:** Criado como unitario, luego anglicano moderado, finalmente agnóstico en su madurez",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_context_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "retrievedPreview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_frase_103",
+          "retrievedPreview": "4. **Sobre el arrepentimiento por no cultivar las artes:** \"Si pudiera vivir mi vida otra vez, habría establecido como regla leer algo de poesía y escuchar algo",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_042",
+      "category": "contextual_synthesis",
+      "question": "Teniendo en cuenta su método de trabajo y el clima intelectual de la época, ¿por qué esperó más de dos décadas para publicar su teoría de la evolución?",
+      "precisionAt4": 0.75,
+      "recallAt4": 0.6,
+      "mrr": 1,
+      "ndcgAt4": 0.7186,
+      "relevantTotal": 5,
+      "matchedInTop4": 3,
+      "mappedByTextInTop4": 3,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "retrievedPreview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_curiosidad_115",
+          "retrievedPreview": "- **Rutina diaria de trabajo modular:** A pesar de su enfermedad, Darwin seguía una rutina extraordinariamente disciplinada en Down House. Se levantaba a las 7 ",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_contexto_historico_050",
+          "retrievedPreview": "teoría con consecuencias históricas devastadoras. ### 4. Perfil psicológico y estilo de comunicación",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_087",
+          "retrievedPreview": "**Rutina diaria y escenarios domésticos:** - **Mañana temprana:** Solía levantarse alrededor de las 7:00, daba un breve paseo y desayunaba antes de su primer b",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "matchMethod": "text"
+        }
+      ]
+    },
+    {
+      "id": "dial_01_turn1",
+      "category": "multi_turn",
+      "question": "Recordando su paso por las Galápagos durante el viaje del Beagle, ¿qué fue lo que más le impresionó de aquellas islas?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.5891,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_linea_tiempo_1835_025",
+          "retrievedPreview": "- **Septiembre-Octubre de 1835:** El Beagle visita las Islas Galápagos durante cinco semanas. Darwin observa tortugas gigantes, iguanas marinas, pinzones y sins",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_viaje_beagle_066",
+          "retrievedPreview": "**El Viaje del Beagle y sus Descubrimientos Más Importantes:** El viaje del HMS Beagle (1831-1836) fue el laboratorio natural que proporcionó a Darwin la evide",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_linea_tiempo_1832_024",
+          "retrievedPreview": "- **1832-1835:** El Beagle navega por las costas de Sudamérica. Darwin explora la Patagonia, Tierra del Fuego, las pampas argentinas, Chile y Perú, enviando mil",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1836_026",
+          "retrievedPreview": "- **1836:** El Beagle regresa a Inglaterra el 2 de octubre. Darwin ya es conocido por sus cartas y publicaciones científicas enviadas desde el viaje.",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "matchMethod": "text"
+        }
+      ]
+    },
+    {
+      "id": "dial_02_turn1",
+      "category": "multi_turn",
+      "question": "De acuerdo con los hechos de 1858, ¿qué sintió usted al recibir el manuscrito de Wallace sobre la selección natural?",
+      "precisionAt4": 0.75,
+      "recallAt4": 0.6,
+      "mrr": 1,
+      "ndcgAt4": 0.6975,
+      "relevantTotal": 5,
+      "matchedInTop4": 3,
+      "mappedByTextInTop4": 3,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_curiosidad_095",
+          "retrievedPreview": "- **El golpe del manuscrito de Wallace:** En 1858, recibir una formulación independiente de selección natural fue para Darwin un shock emocional y ético; su rea",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_timeline_004",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_curiosidad_113",
+          "retrievedPreview": "- **Veinte años de silencio:** Entre el momento en que Darwin formuló claramente la teoría de la selección natural (1838) y la publicación de *El origen de las ",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_wallace_069",
+          "retrievedPreview": "**El Papel de Wallace y la Publicación Acelerada:** Alfred Russel Wallace (1823-1913), un naturalista británico autodidacto que trabajaba en el archipiélago ma",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1858_036",
+          "retrievedPreview": "- **18 de junio de 1858:** Recibe un manuscrito de Alfred Russel Wallace desde Malasia, donde describe de forma independiente la teoría de la selección natural.",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_timeline_002",
+          "matchMethod": "text"
+        }
+      ]
+    }
+  ],
+  "worstCases": [
+    {
+      "id": "qa_031",
+      "category": "contextual_synthesis",
+      "question": "Apoyándose en el mecanismo descrito en «La Teoría de la Selección Natural: Mecanismo Completo», explique la selección natural en unos pasos simples.",
+      "precisionAt4": 0.25,
+      "recallAt4": 0.2,
+      "mrr": 1,
+      "ndcgAt4": 0.1717,
+      "relevantTotal": 5,
+      "matchedInTop4": 1,
+      "mappedByTextInTop4": 1,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_seleccion_natural_060",
+          "retrievedPreview": "**La Teoría de la Selección Natural: Mecanismo Completo** La teoría de la selección natural de Darwin se apoya en cuatro premisas observacionales que, tomadas ",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_frase_102",
+          "retrievedPreview": "3. **Sobre la selección natural vs. la selección artificial:** \"El hombre puede actuar solo sobre formas externas y visibles; la Naturaleza no se preocupa en ab",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_linea_tiempo_1838_028",
+          "retrievedPreview": "- **Septiembre de 1838:** Lee el *Ensayo sobre el principio de la población* de Thomas Robert Malthus, que describe la competencia por recursos limitados. La id",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_linea_tiempo_1859_038",
+          "retrievedPreview": "- **24 de noviembre de 1859:** *Sobre el Origen de las Especies por Medio de la Selección Natural* se publica. Los 1,250 ejemplares de la primera edición se ago",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_021",
+      "category": "opinion",
+      "question": "Considerando su relación con Emma y su postura agnóstica, ¿considera que la ciencia y la fe deben ser necesariamente enemigas?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.2801,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_curiosidad_117",
+          "retrievedPreview": "- **La fe de Emma y el amor de Charles:** Emma Wedgwood era una cristiana devota que creyó sinceramente que las ideas de Charles la separarían de su marido en e",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_bio_002",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_curiosidad_096",
+          "retrievedPreview": "- **Annie y el dolor privado:** La muerte de su hija Annie no fue un episodio lateral; marcó su vida emocional y su distancia final respecto de explicaciones pr",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "retrievedPreview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_biografia_081",
+          "retrievedPreview": "- **Emma Wedgwood:** Esposa, lectora crítica y sostén emocional en Down House. Darwin confiaba en su juicio y cuidaba no trivializar sus diferencias religiosas.",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_019",
+      "category": "opinion",
+      "question": "De acuerdo con la sección de malentendidos y su conocida honestidad intelectual, ¿lamenta haber adoptado la expresión «supervivencia del más apto»?",
+      "precisionAt4": 0.25,
+      "recallAt4": 0.5,
+      "mrr": 0.3333,
+      "ndcgAt4": 0.3066,
+      "relevantTotal": 2,
+      "matchedInTop4": 1,
+      "mappedByTextInTop4": 1,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_perfil_psicologico_056",
+          "retrievedPreview": "- **Inductivismo extremo:** Coleccionaba hechos y observaciones durante años antes de proponer una generalización. Consultaba a especialistas de todo el mundo m",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_metodologia_077",
+          "retrievedPreview": "ra tan buen gerente de información como observador empírico. ### 6. Límites de conocimiento y reacción ante lo desconocido",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_070",
+          "retrievedPreview": "**Malentendidos y Controversias:** *El Darwinismo Social:* Darwin nunca abogó por aplicar su teoría a las sociedades humanas para justificar la desigualdad soc",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_018",
+      "category": "opinion",
+      "question": "Según los malentendidos y controversias documentados, ¿respaldó usted la eugenesia como programa social, tal como la formuló su primo Francis Galton?",
+      "precisionAt4": 0.25,
+      "recallAt4": 0.5,
+      "mrr": 0.5,
+      "ndcgAt4": 0.3869,
+      "relevantTotal": 2,
+      "matchedInTop4": 1,
+      "mappedByTextInTop4": 1,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_conocimiento_fuera_de_dominio_080",
+          "retrievedPreview": "**Temas fuera de dominio histórico que debe reconocer como desconocidos:** - Física cuántica, relatividad general ya formalizada en el siglo XX, genética molec",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_conocimiento_malentendidos_071",
+          "retrievedPreview": "mo una grave y odiosa distorsión del pensamiento darwiniano. *La Eugenesia:* El primo de Darwin, Francis Galton, fundó el movimiento eugenésico, que abogaba po",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_knowledge_005",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_conocimiento_wallace_068",
+          "retrievedPreview": "**El Papel de Wallace y la Publicación Acelerada:**",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_049",
+          "retrievedPreview": " clima de confrontación cultural de aquellos años. Más allá de la biología, el impacto del darwinismo fue inmenso y permanente. Transformó la filosofía —cuesti",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    },
+    {
+      "id": "qa_006",
+      "category": "factual",
+      "question": "Según los datos clave de su familia, ¿cuántos hijos tuvo y qué pérdida personal le afectó más profundamente?",
+      "precisionAt4": 0.5,
+      "recallAt4": 0.4,
+      "mrr": 1,
+      "ndcgAt4": 0.4967,
+      "relevantTotal": 5,
+      "matchedInTop4": 2,
+      "mappedByTextInTop4": 2,
+      "top4": [
+        {
+          "rank": 1,
+          "retrievedId": "charles_darwin_perfil_psicologico_051",
+          "retrievedPreview": "Darwin era un hombre de carácter profundamente afable, modesto y metódico, que combinaba una curiosidad científica insaciable con una notable capacidad de duda ",
+          "relevance": 1,
+          "matchedExpectedChunkId": "darwin_timeline_003",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 2,
+          "retrievedId": "charles_darwin_perfil_psicologico_058",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 2,
+          "matchedExpectedChunkId": "darwin_bio_001",
+          "matchMethod": "text"
+        },
+        {
+          "rank": 3,
+          "retrievedId": "charles_darwin_perfil_psicologico_059",
+          "retrievedPreview": "**Estilo de Comunicación:** - **Tono:** Cuidadoso, preciso, persuasivo y profundamente humilde. Darwin presentaba sus argumentos de manera pausada y académica,",
+          "relevance": 0,
+          "matchMethod": "none"
+        },
+        {
+          "rank": 4,
+          "retrievedId": "charles_darwin_contexto_historico_091",
+          "retrievedPreview": "ni supremacías biológicas como política de Estado. ### 10. Anécdotas y recuerdos personales",
+          "relevance": 0,
+          "matchMethod": "none"
+        }
+      ]
+    }
+  ]
+}

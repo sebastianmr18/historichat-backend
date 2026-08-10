@@ -35,6 +35,7 @@ const envSchema = z.object({
   OPENROUTER_CHAT_MODEL: z.string().default('google/gemma-4-26b-a4b-it'),
   OPENROUTER_HTTP_REFERER: z.string().url().optional(),
   OPENROUTER_APP_TITLE: z.string().optional(),
+  OPENROUTER_MAX_TOKENS: z.coerce.number().int().positive().default(1024),
   LLM_FALLBACK_ORDER: z.string().default('openrouter,groq,gemini'),
   LLM_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(6000),
   GOOGLE_APPLICATION_CREDENTIALS: z

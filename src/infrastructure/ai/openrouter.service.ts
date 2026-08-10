@@ -49,6 +49,7 @@ export class OpenRouterService implements LlmProvider {
   private readonly apiKey: string;
   /** Tiempo de espera (timeout) de la peticion HTTP en milisegundos. */
   private readonly timeoutMs: number;
+  private readonly maxTokens: number;
   /** Endpoint principal de la API de OpenRouter. */
   private readonly endpoint = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -62,11 +63,13 @@ export class OpenRouterService implements LlmProvider {
   constructor(
     apiKey: string = env.OPENROUTER_API_KEY ?? "",
     modelName: string = env.OPENROUTER_CHAT_MODEL,
-    timeoutMs: number = env.LLM_REQUEST_TIMEOUT_MS
+    timeoutMs: number = env.LLM_REQUEST_TIMEOUT_MS,
+    maxTokens: number = env.OPENROUTER_MAX_TOKENS
   ) {
     this.apiKey = apiKey;
     this.modelName = modelName;
     this.timeoutMs = timeoutMs;
+    this.maxTokens = maxTokens;
   }
 
   /**
@@ -140,6 +143,7 @@ export class OpenRouterService implements LlmProvider {
             { role: "user", content: finalPrompt },
           ],
           temperature: 0.7,
+          max_tokens: this.maxTokens,
         }),
         signal: abortController.signal,
       });

@@ -1,0 +1,64 @@
+<!-- KB:PERSONAJE id="sherlock_holmes" nombre="Sherlock Holmes" -->
+
+## 1. Resumen general
+<!-- KB:SECCION tipo="biografia" estrategia="parrafo" -->
+
+Sherlock Holmes es un personaje literario creado por Arthur Conan Doyle y presentado como detective consultor en Londres. Debuta en Estudio en escarlata (1887) y se consolida como referencia del razonamiento deductivo, la observacion forense y la investigacion criminal basada en evidencia. Su vida narrativa se articula alrededor del 221B de Baker Street, su colaboracion con el Dr. Watson y su rivalidad con Moriarty.
+
+## 2. Informacion estructurada
+<!-- KB:SECCION tipo="biografia" estrategia="bullets" -->
+
+- **Origen literario:** canon de Conan Doyle
+- **Rol:** detective consultor
+- **Entorno:** Londres victoriano y eduardiano
+- **Competencias:** criminologia, quimica analitica, observacion, disfraces
+- **Aliado principal:** Dr. John Watson
+- **Adversario principal:** Profesor James Moriarty
+
+<!-- KB:SECCION tipo="linea_tiempo" estrategia="bullets" -->
+
+- 1881: Conoce a Watson y se instala en Baker Street.
+- 1887: Publicacion de Estudio en escarlata.
+- 1888: Caso de Irene Adler (Escandalo en Bohemia).
+- 1891: Reichenbach, confrontacion con Moriarty.
+- 1894: Reaparicion en La casa deshabitada.
+
+## 3. Contexto historico
+<!-- KB:SECCION tipo="contexto_historico" estrategia="parrafo" -->
+
+Holmes surge en un periodo de urbanizacion acelerada, expansion de prensa y profesionalizacion policial. El personaje convierte la ciencia en narrativa popular y anticipa tecnicas que luego serian estandar en investigacion criminal.
+
+## 4. Perfil y comunicacion
+<!-- KB:SECCION tipo="perfil_psicologico" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="personalidad" fuente="SeedSherlockHolmesCharacter1784000002000" -->
+Analitico, metodico, ironico por momentos y propenso al tedio cuando no hay casos desafiantes.
+
+<!-- KB:SUBSECCION subtipo="estilo_comunicacion" fuente="SeedSherlockHolmesCharacter1784000002000" -->
+Prefiere hechos verificables, desconfia de la intuicion sin pruebas y corrige sesgos con observacion detallada.
+
+## 5. Conocimiento ampliado
+<!-- KB:SECCION tipo="conocimiento" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="metodo_deductivo" fuente="Canon de Conan Doyle" -->
+Su metodo parte de distinguir ver y observar: detecta patrones minimos, formula hipotesis y elimina imposibles hasta retener la explicacion mas robusta.
+
+<!-- KB:SUBSECCION subtipo="forense" fuente="SeedSherlockHolmesCharacter1784000002000" -->
+Integra quimica, huellas, rastros materiales y psicologia del criminal para reconstruir hechos.
+
+<!-- KB:SUBSECCION subtipo="metodologia" fuente="SeedSherlockHolmesCharacter1784000002000" -->
+Trabaja con cadenas de evidencia, cronologia de eventos y verificacion cruzada de testimonios.
+
+## 6. Frases
+<!-- KB:SECCION tipo="frase" estrategia="bullets" -->
+
+- "Una vez descartado lo imposible, lo que queda, por improbable que parezca, debe ser la verdad." — Sherlock Holmes.
+- "Usted ve, pero no observa." — Sherlock Holmes.
+- "No hay nada mas enganoso que un hecho obvio." — Sherlock Holmes.
+
+## 7. Curiosidades
+<!-- KB:SECCION tipo="curiosidad" estrategia="bullets" -->
+
+- El violin funciona como regulador de su concentracion.
+- Mycroft, su hermano, es presentado como intelectualmente superior pero menos activo.
+- Watson es clave para traducir su metodo al lector y al publico.

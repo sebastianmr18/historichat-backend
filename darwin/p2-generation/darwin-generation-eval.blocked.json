@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-05-24T04:56:02.362Z",
+  "status": "blocked",
+  "reason": "Falta el archivo de respuestas del modelo",
+  "nextSteps": [
+    "Copia testing/inputs/p2-generation/darwin-generated-responses.template.json a testing/inputs/p2-generation/darwin-generated-responses.json",
+    "Completa model_response para cada pregunta",
+    "Vuelve a ejecutar npm run test:functional:generation"
+  ]
+}

@@ -1,0 +1,65 @@
+<!-- KB:PERSONAJE id="albert_einstein" nombre="Albert Einstein" -->
+
+## 1. Resumen general
+<!-- KB:SECCION tipo="biografia" estrategia="parrafo" -->
+
+Albert Einstein (1879-1955) fue un fisico teorico que redefinio la comprension del espacio, el tiempo, la luz y la gravedad. Su annus mirabilis de 1905 y la relatividad general de 1915 marcaron hitos de la ciencia moderna. Ademas de su trabajo tecnico, fue una figura publica sobre paz, exilio, responsabilidad moral y riesgos de la tecnologia.
+
+## 2. Informacion estructurada
+<!-- KB:SECCION tipo="biografia" estrategia="bullets" -->
+
+- **Nacimiento:** 1879, Ulm, Imperio aleman
+- **Fallecimiento:** 1955, Princeton, Estados Unidos
+- **Rol:** Fisico teorico
+- **Campos:** relatividad, fisica estadistica, fundamentos cuanticos
+- **Hitos:** annus mirabilis (1905), relatividad general (1915), Nobel (1921)
+- **Contexto:** exilio en 1933 y actividad publica en el siglo XX
+
+<!-- KB:SECCION tipo="linea_tiempo" estrategia="bullets" -->
+
+- 1905: Publica trabajos sobre efecto fotoelectrico, movimiento browniano y relatividad especial.
+- 1915: Formula la relatividad general.
+- 1921: Recibe el Premio Nobel.
+- 1933: Sale de Alemania y se instala en Princeton.
+- 1945+: Refuerza su posicion sobre paz y responsabilidad cientifica.
+- 1955: Fallece en Princeton.
+
+## 3. Contexto historico
+<!-- KB:SECCION tipo="contexto_historico" estrategia="parrafo" -->
+
+Einstein trabajo en un siglo atravesado por guerras mundiales, totalitarismos y cambio tecnologico acelerado. Su trayectoria cientifica y politica se vio marcada por el exilio, el antisemitismo europeo y los debates eticos sobre poder destructivo de la ciencia.
+
+## 4. Perfil y comunicacion
+<!-- KB:SECCION tipo="perfil_psicologico" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="personalidad" fuente="SeedAlbertEinsteinEditorialPrototype1781000003000" -->
+Curioso, reflexivo y didactico. Combinaba intuicion fisica con rigor conceptual.
+
+<!-- KB:SUBSECCION subtipo="estilo_comunicacion" fuente="SeedAlbertEinsteinEditorialPrototype1781000003000" -->
+Usaba experimentos mentales para hacer visibles problemas abstractos: trenes, relojes, ascensores y rayos de luz.
+
+## 5. Conocimiento ampliado
+<!-- KB:SECCION tipo="conocimiento" estrategia="parrafo" -->
+
+<!-- KB:SUBSECCION subtipo="relatividad_especial" fuente="1905" -->
+La relatividad especial establecio que las leyes fisicas son invariantes para observadores inerciales y que la velocidad de la luz es constante, con consecuencias sobre tiempo, simultaneidad y energia.
+
+<!-- KB:SUBSECCION subtipo="relatividad_general" fuente="1915" -->
+La relatividad general describio la gravedad como curvatura del espacio-tiempo causada por masa y energia.
+
+<!-- KB:SUBSECCION subtipo="metodologia" fuente="SeedAlbertEinsteinEditorialPrototype1781000003000" -->
+Su razonamiento integraba imagen fisica, matematica y validacion empiri ca progresiva.
+
+## 6. Frases
+<!-- KB:SECCION tipo="frase" estrategia="bullets" -->
+
+- "La imaginacion es mas importante que el conocimiento..." — Einstein.
+- "Lo importante es no dejar de hacerse preguntas." — Einstein.
+- "La vida es como andar en bicicleta..." — Einstein.
+
+## 7. Curiosidades
+<!-- KB:SECCION tipo="curiosidad" estrategia="bullets" -->
+
+- Trabajo en una oficina de patentes antes de su consagracion academica.
+- Se convirtio en icono cultural global ademas de cientifico.
+- Mantuvo debates profundos con Niels Bohr sobre la interpretacion cuantica.
