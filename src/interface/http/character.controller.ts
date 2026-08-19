@@ -29,7 +29,8 @@ import { extractUserId } from "../../api/auth.utils.js";
 import { serializeError } from "../../shared/errors.js";
 import { createSuffixedCharacterSlug, getCharacterSlugBase, normalizeCharacterSlug } from "../../shared/character-slug.js";
 import { generateTraceId } from "../../shared/trace.js";
-import { IStorageService } from "../../shared/types.js";
+import { IStorageService, PromptMode } from "../../shared/types.js";
+import { buildModeSystemPrompt } from "../../application/prompts/system-prompt-builder.js";
 import { adminCharactersQuerySchema, createCharacterSchema, updateCharacterSchema } from "./schemas/character.schema.js";
 import { withSignedGalleryImageUrls, withSignedImageUrls, withSignedImageUrlsBatch } from "./presenters/character.presenter.js";
 
@@ -696,6 +697,44 @@ export class CharacterController {
       });
     } catch (error) {
       this.handleError(res, "getEditorialGalleryById", error);
+    }
+  }
+
+  private static VALID_PROMPT_MODES: ReadonlySet<PromptMode> = new Set<PromptMode>(["interview", "call", "debate"]);
+
+  async getSystemPromptById(req: Request, res: Response) {
+    try {
+      const id = this.getCharacterIdParam(req);
+      const userId = extractUserId(req);
+      const character = await this.findAccessibleCharacter(id, userId);
+
+      if (!character) {
+        return res.status(404).json({ error: "Personaje no encontrado" });
+      }
+
+      const modeParam = (req.query.mode as string | undefined) ?? "interview";
+
+      if (!CharacterController.VALID_PROMPT_MODES.has(modeParam as PromptMode)) {
+        return res.status(400).json({
+          error: `El parametro 'mode' debe ser uno de: ${[...CharacterController.VALID_PROMPT_MODES].join(", ")}`,
+        });
+      }
+
+      const mode = modeParam as PromptMode;
+
+      const systemPrompt = buildModeSystemPrompt({
+        character,
+        mode,
+      });
+
+      return res.json({
+        characterId: character.id,
+        characterName: character.name,
+        mode,
+        systemPrompt,
+      });
+    } catch (error) {
+      this.handleError(res, "getSystemPromptById", error);
     }
   }
 

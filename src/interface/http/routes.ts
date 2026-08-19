@@ -31,6 +31,7 @@ router.put('/characters/:id', requireAdminRole, (req, res) => characterCtrl.upda
 router.delete('/characters/:id', requireAdminRole, (req, res) => characterCtrl.destroy(req, res));
 router.get('/characters/by-slug/:slug', (req, res) => characterCtrl.getBySlug(req, res));
 router.get('/characters/:id', (req, res) => characterCtrl.getById(req, res));
+router.get('/characters/:id/system-prompt', (req, res) => characterCtrl.getSystemPromptById(req, res));
 router.get('/characters/:id/editorial/hero', (req, res) => characterCtrl.getEditorialHeroById(req, res));
 router.get('/characters/:id/editorial/overview', (req, res) => characterCtrl.getEditorialOverviewById(req, res));
 router.get('/characters/:id/editorial/timeline', (req, res) => characterCtrl.getEditorialTimelineById(req, res));
